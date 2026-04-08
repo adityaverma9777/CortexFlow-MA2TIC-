@@ -3,6 +3,9 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY ?? "";
 const GROQ_TRANSCRIBE_MODEL = process.env.GROQ_TRANSCRIBE_MODEL ?? "whisper-large-v3-turbo";
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 function extractPauseMap(wordTimestamps: Array<{ word: string; start: number; end: number }>): number[] {
   const pauses: number[] = [];
   for (let i = 0; i < wordTimestamps.length - 1; i++) {

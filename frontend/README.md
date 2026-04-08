@@ -1,128 +1,56 @@
 # Frontend (Next.js)
 
-This frontend powers the CortexFlow user workspace and interaction layer.
+This package contains the CortexFlow interaction layer and visualization workspace.
 
-JOINT COLLABORATION REPO BY THE MA2TIC GROUP.
+Joint collaboration repository by the MA2TIC group.
 
-This repository is private and not open source. Usage is governed by the root license file.
-
-
+Private codebase. Licensing context is defined in [../LICENSE](../LICENSE).
 
 ## Stack
 
-
-
 - Next.js App Router
-
 - React + TypeScript
-
 - Tailwind CSS v4
-
 - Recharts + Three.js
-
 - Groq OpenAI-compatible transcription API
 
+## Environment Variables
 
-
-## Local Setup
-
-
-
-1. Install dependencies:
-
-
-
-```bash
-
-npm ci
-
-```
-
-
-
-2. Create local env file:
-
-
-
-```bash
-
-cp .env.example .env.local
-
-```
-
-
-
-3. Fill env vars in `.env.local`:
-
-
+`.env.local` fields:
 
 ```env
-
-GROQ_API_KEY=your_groq_key
-
+GROQ_API_KEY=
 GROQ_TRANSCRIBE_MODEL=whisper-large-v3-turbo
-
 BACKEND_URL=http://localhost:8000
-
+NEXT_PUBLIC_BACKEND_WAKE_ENABLED=true
 ```
 
+`env.local.example` includes the same template.
 
+## API Surface
 
-4. Start dev server:
+- `POST /api/transcribe`: audio upload and Groq transcription
+- `POST /api/analyze`: proxy to backend analysis endpoint at `BACKEND_URL`
+- `POST /api/wake-backend`: best-effort health ping to reduce cold-start delay
 
+## Hosting Profile
 
+- Frontend platform: Vercel
+- Vercel root directory: `frontend`
+- Backend target: Hugging Face Spaces (Docker)
 
-```bash
-
-npm run dev
-
-```
-
-
-
-## API Routes
-
-
-
-- `POST /api/transcribe`: uploads audio and calls Groq transcription.
-
-- `POST /api/analyze`: proxies analysis payload to backend (`BACKEND_URL`).
-
-
-
-## Deployment
-
-
-
-### Vercel (frontend)
-
-
-
-Set these environment variables in Vercel project settings:
-
-
+Typical Vercel variables:
 
 - `GROQ_API_KEY`
+- `GROQ_TRANSCRIBE_MODEL`
+- `BACKEND_URL`
+- `NEXT_PUBLIC_BACKEND_WAKE_ENABLED`
 
-- `GROQ_TRANSCRIBE_MODEL` (optional, default is `whisper-large-v3-turbo`)
+## Local Development Reference
 
-- `BACKEND_URL` (public URL of the backend hosted on Render)
-
-### Render (backend)
-
-
-
-Deploy backend separately on Render and copy the Render service URL into Vercel as `BACKEND_URL`.
-
-
-
-## Notes
-
-
-
-- Keep API secrets only in environment variables.
-
-- Preserve reusable panel architecture and shared visual tokens when making UI changes.
-
-- Refer to the repository license in [../LICENSE](../LICENSE) before sharing or reusing this code.
+```bash
+npm ci
+cp env.local.example .env.local
+npm run dev
+```
 

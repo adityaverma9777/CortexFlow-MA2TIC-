@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Syne, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { BackendWarmupPing } from "@/components/backend-warmup-ping";
 import "./globals.css";
 const syne = Syne({
   variable: "--font-syne",
@@ -35,7 +36,10 @@ export default function RootLayout({
       lang="en"
       className={`${syne.variable} ${dmSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="h-full">{children}</body>
+      <body className="h-full">
+        <BackendWarmupPing />
+        {children}
+      </body>
     </html>
   );
 }
