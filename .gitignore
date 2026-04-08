@@ -1,0 +1,10 @@
+# Global local env ignores
+.env
+.env.*
+**/.env
+**/.env.*
+**/.env.local
+
+# Keep shareable examples tracked
+!**/.env.example
+!**/env.local.example
