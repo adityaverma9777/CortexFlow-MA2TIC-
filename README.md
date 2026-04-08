@@ -53,3 +53,15 @@ This repository is not open source.
 Use, copying, modification, redistribution, and publication are restricted except where explicitly authorized in writing by the rights holder.
 
 See the license terms in [LICENSE](LICENSE).
+
+## Copyright Registration Certificate
+
+![CortexFlow Copyright Certificate](frontend/public/images/CortexFlow%20-%20Protected%20by%20Copyrighted.com_page-0001.jpg)
+
+- Work title: CortexFlow
+- Work type: Digital content
+- Registration number: JMfvoCJAaLxUcIDf
+- Registration date: April 8, 2026 at 7:54 AM
+- Status: Registered
+
+Certificate PDF: [CortexFlow - Protected by Copyrighted.com.pdf](CortexFlow%20-%20Protected%20by%20Copyrighted.com.pdf)
