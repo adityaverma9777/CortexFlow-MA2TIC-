@@ -1,7 +1,7 @@
 "use client";
 
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { browserLocalPersistence, getAuth, setPersistence } from "firebase/auth";
+import { type Auth, browserLocalPersistence, getAuth, setPersistence } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,13 +12,48 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+function hasFirebaseClientConfig() {
+  return Boolean(
+    firebaseConfig.apiKey
+    && firebaseConfig.authDomain
+    && firebaseConfig.projectId
+    && firebaseConfig.appId
+  );
+}
 
-export const firebaseAuth = getAuth(firebaseApp);
+let firebaseAuthCache: Auth | null | undefined;
+
+export function getFirebaseAuthInstance(): Auth | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  if (firebaseAuthCache !== undefined) {
+    return firebaseAuthCache;
+  }
+
+  if (!hasFirebaseClientConfig()) {
+    firebaseAuthCache = null;
+    return null;
+  }
+
+  const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  firebaseAuthCache = getAuth(firebaseApp);
+  return firebaseAuthCache;
+}
+
+export function isFirebaseClientConfigured() {
+  return hasFirebaseClientConfig();
+}
 
 let persistencePromise: Promise<void> | null = null;
 
 export function ensureFirebaseLocalPersistence(): Promise<void> {
+  const firebaseAuth = getFirebaseAuthInstance();
+  if (!firebaseAuth) {
+    return Promise.resolve();
+  }
+
   if (!persistencePromise) {
     persistencePromise = setPersistence(firebaseAuth, browserLocalPersistence).catch(() => {
       // If persistence fails (browser policy), continue with Firebase defaults.

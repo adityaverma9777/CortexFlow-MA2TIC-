@@ -16,7 +16,11 @@ import {
   signOut,
   updateProfile,
 } from "firebase/auth";
-import { firebaseAuth, ensureFirebaseLocalPersistence } from "@/libs/firebase-client";
+import {
+  ensureFirebaseLocalPersistence,
+  getFirebaseAuthInstance,
+  isFirebaseClientConfigured,
+} from "@/libs/firebase-client";
 
 type SocialProvider = "google" | "github" | "facebook" | "twitter" | "microsoft" | "apple";
 
@@ -99,7 +103,20 @@ export function useFirebaseAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [idToken, setIdToken] = useState<string | null>(null);
 
+  const missingConfigMessage = "Firebase client env vars are missing. Configure NEXT_PUBLIC_FIREBASE_* in Vercel.";
+
   useEffect(() => {
+    if (!isFirebaseClientConfigured()) {
+      setIsReady(true);
+      return;
+    }
+
+    const firebaseAuth = getFirebaseAuthInstance();
+    if (!firebaseAuth) {
+      setIsReady(true);
+      return;
+    }
+
     let unsubscribe = () => {};
 
     void ensureFirebaseLocalPersistence().finally(() => {
@@ -118,9 +135,10 @@ export function useFirebaseAuth() {
   }, []);
 
   const checkSignInMethods = useCallback(async (email: string): Promise<string[]> => {
+    const firebaseAuth = getFirebaseAuthInstance();
     const trimmed = email.trim();
 
-    if (!trimmed) {
+    if (!firebaseAuth || !trimmed) {
       return [];
     }
 
@@ -132,6 +150,11 @@ export function useFirebaseAuth() {
   }, []);
 
   const signInWithSocial = useCallback(async (providerNameValue: SocialProvider): Promise<AuthActionResult> => {
+    const firebaseAuth = getFirebaseAuthInstance();
+    if (!firebaseAuth) {
+      return { ok: false, error: missingConfigMessage };
+    }
+
     setIsBusy(true);
 
     try {
@@ -154,9 +177,14 @@ export function useFirebaseAuth() {
     } finally {
       setIsBusy(false);
     }
-  }, [checkSignInMethods]);
+  }, [checkSignInMethods, missingConfigMessage]);
 
   const signUpWithEmail = useCallback(async (name: string, email: string, password: string): Promise<AuthActionResult> => {
+    const firebaseAuth = getFirebaseAuthInstance();
+    if (!firebaseAuth) {
+      return { ok: false, error: missingConfigMessage };
+    }
+
     setIsBusy(true);
 
     try {
@@ -184,9 +212,14 @@ export function useFirebaseAuth() {
     } finally {
       setIsBusy(false);
     }
-  }, [checkSignInMethods]);
+  }, [checkSignInMethods, missingConfigMessage]);
 
   const signInWithEmail = useCallback(async (email: string, password: string): Promise<AuthActionResult> => {
+    const firebaseAuth = getFirebaseAuthInstance();
+    if (!firebaseAuth) {
+      return { ok: false, error: missingConfigMessage };
+    }
+
     setIsBusy(true);
 
     try {
@@ -203,9 +236,14 @@ export function useFirebaseAuth() {
     } finally {
       setIsBusy(false);
     }
-  }, [checkSignInMethods]);
+  }, [checkSignInMethods, missingConfigMessage]);
 
   const logOut = useCallback(async () => {
+    const firebaseAuth = getFirebaseAuthInstance();
+    if (!firebaseAuth) {
+      return;
+    }
+
     await signOut(firebaseAuth);
   }, []);
 
