@@ -4,7 +4,22 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 
 export type SignalRegionActivation = {
   region: string;
@@ -28,7 +43,22 @@ type SignalFieldViewerProps = {
   showLabels?: boolean;
 };
 
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 
 const REGION_MESH_CONFIG: Record<string, { file: string; color: string }> = {
   "Broca's area":    { file: "/cortex_region_language_exec.obj",  color: "#D85A30" },
@@ -134,7 +164,22 @@ const NEURAL_CONNECTIONS: Record<string, Array<{ target: string; tract: string }
     { target: "DLPFC",           tract: "Cingulum — emotion regulation" },
   ],
 };
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 
 const REGION_DESCRIPTIONS: Record<string, string> = {
   "Broca's area":
@@ -256,7 +301,22 @@ function HoverTooltip({
     </div>
   );
 }
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 function RegionInfoPanel({
   region,
   onClose,
@@ -339,6 +399,8 @@ export default function SignalFieldViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const labelElsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const showLabelsRef = useRef(showLabels);
+  const isLowPowerRef = useRef(false);
+  const isTouchLikeRef = useRef(false);
   type ConnectionParticle = {
     mesh: THREE.Mesh;
     curve: THREE.CatmullRomCurve3;
@@ -367,14 +429,30 @@ export default function SignalFieldViewer({
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const hoveredRegionRef = useRef<string | null>(null);
   const activationsRef = useRef(activations);
-  activationsRef.current = activations;
   const onRegionClickRef = useRef(onRegionClick);
-  onRegionClickRef.current = onRegionClick;
-  showLabelsRef.current = showLabels;
+
+  useEffect(() => {
+    activationsRef.current = activations;
+  }, [activations]);
+
+  useEffect(() => {
+    onRegionClickRef.current = onRegionClick;
+  }, [onRegionClick]);
+
+  useEffect(() => {
+    showLabelsRef.current = showLabels;
+  }, [showLabels]);
 
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
+    const touchLike = window.matchMedia("(pointer: coarse)").matches;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const lowPower = touchLike || reducedMotion || window.innerWidth < 1024;
+
+    isTouchLikeRef.current = touchLike;
+    isLowPowerRef.current = lowPower;
+
     const width = container.clientWidth;
     const height = container.clientHeight;
 
@@ -383,9 +461,13 @@ export default function SignalFieldViewer({
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
     camera.position.set(0, 0.5, 3);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: !lowPower,
+      alpha: true,
+      powerPreference: lowPower ? "low-power" : "high-performance",
+    });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1 : 2));
     renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
 
@@ -407,6 +489,7 @@ export default function SignalFieldViewer({
     const regionMeshes = new Map<string, THREE.Group>();
     const regionMaterials = new Map<string, THREE.MeshPhongMaterial>();
     const regionCenters = new Map<string, THREE.Vector3>();
+    const clickables: THREE.Object3D[] = [];
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     const clock = new THREE.Clock();
@@ -466,6 +549,7 @@ export default function SignalFieldViewer({
             if ((child as THREE.Mesh).isMesh) {
               (child as THREE.Mesh).material = material;
               child.userData = { regionName: region.region };
+              clickables.push(child);
             }
           });
           const box = new THREE.Box3().setFromObject(obj);
@@ -488,10 +572,32 @@ export default function SignalFieldViewer({
         (err) => console.warn(`Failed to load ${config.file}:`, err),
       );
     }
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
     let frameId: number;
-    const animate = () => {
+    let lastRenderTs = 0;
+    const animate = (timestamp: number) => {
       frameId = requestAnimationFrame(animate);
+
+      if (isLowPowerRef.current && timestamp - lastRenderTs < 1000 / 30) {
+        return;
+      }
+
+      lastRenderTs = timestamp;
       const s = sceneRef.current;
       if (!s) return;
 
@@ -502,7 +608,7 @@ export default function SignalFieldViewer({
         s.idleTime = 0;
       } else {
         s.idleTime += delta;
-        if (s.idleTime > 2) {
+        if (!isLowPowerRef.current && s.idleTime > 2) {
           s.camera.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.003);
           s.camera.lookAt(0, 0, 0);
         }
@@ -559,7 +665,7 @@ export default function SignalFieldViewer({
         });
       }
     };
-    animate();
+    animate(performance.now());
 
     controls.addEventListener("start", () => {
       if (sceneRef.current) sceneRef.current.interacting = true;
@@ -576,48 +682,72 @@ export default function SignalFieldViewer({
       renderer.setSize(w, h);
     };
     window.addEventListener("resize", handleResize);
-    const getClickables = (): THREE.Object3D[] => {
-      const clickables: THREE.Object3D[] = [];
-      regionMeshes.forEach((group) => {
-        group.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh && child.userData.regionName) {
-            clickables.push(child);
-          }
-        });
-      });
-      return clickables;
-    };
-
+    let hoverUpdateRaf = 0;
     const handlePointerMove = (event: PointerEvent) => {
+      if (isTouchLikeRef.current || clickables.length === 0) {
+        return;
+      }
+
       const rect = container.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-      setMousePos({ x: event.clientX - rect.left, y: event.clientY - rect.top });
-
       raycaster.setFromCamera(pointer, camera);
-      const intersects = raycaster.intersectObjects(getClickables());
+      const intersects = raycaster.intersectObjects(clickables, false);
 
       if (intersects.length > 0) {
         const name = intersects[0].object.userData.regionName as string;
-        hoveredRegionRef.current = name;
-        setHoveredRegion(name);
+        if (hoveredRegionRef.current !== name) {
+          hoveredRegionRef.current = name;
+          setHoveredRegion(name);
+        }
+
+        if (!hoverUpdateRaf) {
+          hoverUpdateRaf = window.requestAnimationFrame(() => {
+            hoverUpdateRaf = 0;
+            setMousePos({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+          });
+        }
+
         container.style.cursor = "pointer";
       } else {
-        hoveredRegionRef.current = null;
-        setHoveredRegion(null);
+        if (hoveredRegionRef.current !== null) {
+          hoveredRegionRef.current = null;
+          setHoveredRegion(null);
+        }
         container.style.cursor = "grab";
       }
     };
-    container.addEventListener("pointermove", handlePointerMove);
+    if (!touchLike) {
+      container.addEventListener("pointermove", handlePointerMove);
+    }
 
     const handleClick = (event: MouseEvent) => {
+      if (clickables.length === 0) {
+        return;
+      }
+
       const rect = container.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
       raycaster.setFromCamera(pointer, camera);
-      const intersects = raycaster.intersectObjects(getClickables());
+      const intersects = raycaster.intersectObjects(clickables, false);
 
       if (intersects.length > 0) {
         const name = intersects[0].object.userData.regionName as string;
@@ -631,11 +761,30 @@ export default function SignalFieldViewer({
       }
     };
     container.addEventListener("click", handleClick);
+
     return () => {
       window.removeEventListener("resize", handleResize);
-      container.removeEventListener("pointermove", handlePointerMove);
+      if (!touchLike) {
+        container.removeEventListener("pointermove", handlePointerMove);
+      }
       container.removeEventListener("click", handleClick);
+      if (hoverUpdateRaf) {
+        window.cancelAnimationFrame(hoverUpdateRaf);
+      }
       cancelAnimationFrame(frameId);
+      controls.dispose();
+
+      scene.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
+          mesh.geometry?.dispose();
+          const mat = mesh.material;
+          if (mat) {
+            (Array.isArray(mat) ? mat : [mat]).forEach((m) => m.dispose());
+          }
+        }
+      });
+
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
@@ -673,6 +822,11 @@ export default function SignalFieldViewer({
 
     const srcRegion = activationsRef.current.find((r) => r.region === regionName);
     const color = new THREE.Color(activationColor(srcRegion?.activation ?? 0.5));
+    const lowPower = isLowPowerRef.current;
+    const trunkSegments = lowPower ? 20 : 40;
+    const branchSegments = lowPower ? 16 : 28;
+    const trunkParticles = lowPower ? 2 : 4;
+    const maxRelayTargets = lowPower ? 6 : Number.POSITIVE_INFINITY;
 
     const group = new THREE.Group();
     s.connectionGroup = group;
@@ -694,7 +848,7 @@ export default function SignalFieldViewer({
 
       const curve = new THREE.CatmullRomCurve3([fromCenter, mid1, mid2, toCenter]);
 
-      const tubeGeo = new THREE.TubeGeometry(curve, 40, 0.007, 5, false);
+      const tubeGeo = new THREE.TubeGeometry(curve, trunkSegments, 0.007, 5, false);
       const tubeMat = new THREE.MeshBasicMaterial({
         color,
         transparent: true,
@@ -704,7 +858,7 @@ export default function SignalFieldViewer({
       });
       group.add(new THREE.Mesh(tubeGeo, tubeMat));
 
-      const haloGeo = new THREE.TubeGeometry(curve, 40, 0.018, 5, false);
+      const haloGeo = new THREE.TubeGeometry(curve, trunkSegments, 0.018, 5, false);
       const haloMat = new THREE.MeshBasicMaterial({
         color,
         transparent: true,
@@ -715,7 +869,7 @@ export default function SignalFieldViewer({
       group.add(new THREE.Mesh(haloGeo, haloMat));
 
       const particleGeo = new THREE.SphereGeometry(0.022, 6, 6);
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < trunkParticles; i++) {
         const particleMat = new THREE.MeshBasicMaterial({
           color,
           transparent: true,
@@ -754,14 +908,29 @@ export default function SignalFieldViewer({
 
       const curve = new THREE.CatmullRomCurve3([from, mid, to]);
 
-      const tubeGeo = new THREE.TubeGeometry(curve, 28, radius, 4, false);
+      const tubeGeo = new THREE.TubeGeometry(curve, branchSegments, radius, 4, false);
       const tubeMat = new THREE.MeshBasicMaterial({
         color, transparent: true, opacity,
         blending: THREE.AdditiveBlending, depthWrite: false,
       });
       group.add(new THREE.Mesh(tubeGeo, tubeMat));
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
-      const haloTubeGeo = new THREE.TubeGeometry(curve, 28, radius * 2.2, 4, false);
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
+      const haloTubeGeo = new THREE.TubeGeometry(curve, branchSegments, radius * 2.2, 4, false);
       const haloTubeMat = new THREE.MeshBasicMaterial({
         color, transparent: true, opacity: opacity * 0.22,
         blending: THREE.AdditiveBlending, depthWrite: false,
@@ -805,7 +974,7 @@ export default function SignalFieldViewer({
       return curve;
     };
 
-    const branchTargets = REGION_BRANCHES[regionName] ?? [];
+    const branchTargets = (REGION_BRANCHES[regionName] ?? []).slice(0, maxRelayTargets);
 
     for (let bi = 0; bi < branchTargets.length; bi++) {
       const toPos = ANATOMICAL_NODES[branchTargets[bi]];
@@ -863,7 +1032,7 @@ export default function SignalFieldViewer({
   }, [activations]);
 
   const hoveredData = hoveredRegion
-    ? activationsRef.current.find((r) => r.region === hoveredRegion) ?? null
+    ? activations.find((r) => r.region === hoveredRegion) ?? null
     : null;
 
   return (

@@ -47,6 +47,14 @@ export type HistoryEntry = {
   ============================================================*/
 const MAX_ENTRIES = 100;
 
+const SAVE_RETRY_DELAYS_MS = [300, 900, 1800];
+
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 type ApiReportRow = {
   id: string;
   created_at: string;
@@ -115,34 +123,81 @@ export function useSessionHistory(idToken: string | null, isAuthenticated: boole
     void loadEntries();
   }, [loadEntries]);
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const sync = async () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      await loadEntries();
+    };
+
+    const intervalId = window.setInterval(() => {
+      void sync();
+    }, 15_000);
+
+    const onVisibility = () => {
+      void sync();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [isAuthenticated, loadEntries]);
+
+  const createReport = useCallback(async (entry: Omit<HistoryEntry, "id" | "timestamp">) => {
+    for (let attempt = 0; attempt <= SAVE_RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        const res = await fetch("/api/reports", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(idToken),
+          },
+          body: JSON.stringify(entry),
+        });
+
+        if (!res.ok) {
+          throw new Error(`Failed to save report: ${res.status}`);
+        }
+
+        const data = await res.json() as { report?: ApiReportRow };
+        if (!data.report) {
+          throw new Error("Missing report in response");
+        }
+
+        return toHistoryEntry(data.report);
+      } catch {
+        const waitMs = SAVE_RETRY_DELAYS_MS[attempt];
+        if (waitMs == null) {
+          break;
+        }
+
+        await sleep(waitMs);
+      }
+    }
+
+    return null;
+  }, [idToken]);
+
   const addEntry = useCallback(async (entry: Omit<HistoryEntry, "id" | "timestamp">) => {
     if (!isAuthenticated) return;
 
-    try {
-      const res = await fetch("/api/reports", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders(idToken),
-        },
-        body: JSON.stringify(entry),
-      });
-
-      if (!res.ok) {
-        return;
-      }
-
-      const data = await res.json() as { report?: ApiReportRow };
-      if (!data.report) {
-        return;
-      }
-
-      const created = toHistoryEntry(data.report);
+    const created = await createReport(entry);
+    if (created) {
       setEntries((prev) => [created, ...prev].slice(0, MAX_ENTRIES));
-    } catch {
-      // Ignore transient API failures.
+      return;
     }
-  }, [idToken, isAuthenticated]);
+
+    await loadEntries();
+  }, [createReport, isAuthenticated, loadEntries]);
 
   const removeEntry = useCallback(async (id: string) => {
     if (!isAuthenticated) return;

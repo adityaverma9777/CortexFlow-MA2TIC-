@@ -893,7 +893,13 @@ export default function DashboardPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
   const isAuthenticated = Boolean(profile);
-  const { entries: historyEntries, addEntry, removeEntry, clearAll } = useSessionHistory(idToken, isAuthenticated);
+  const {
+    entries: historyEntries,
+    addEntry,
+    removeEntry,
+    clearAll,
+    reload: reloadHistory,
+  } = useSessionHistory(idToken, isAuthenticated);
   const [hasStarted, setHasStarted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -946,6 +952,26 @@ export default function DashboardPage() {
     if (!running) return undefined;
     return { "Lexical agent": "Lexical", "Semantic agent": "Semantic", "Prosody agent": "Prosody", "Syntax agent": "Syntax" }[running.name];
   }, [agentSteps]);
+
+  const isDashboardPage = activePage === "dashboard";
+  const isHistoryPage = activePage === "history";
+  const isReportsPage = activePage === "reports";
+  const isBrainRegionsPage = activePage === "brain regions";
+  const isBiomarkersPage = activePage === "biomarkers";
+  const isLibraryPage = isDashboardPage || isHistoryPage || isReportsPage || isBrainRegionsPage || isBiomarkersPage;
+
+  const showPhase2 = hasStarted && !isLoading && !isLibraryPage;
+  const showPhase1 = !showPhase2 && !isLibraryPage;
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    if (isDashboardPage || isHistoryPage || isReportsPage) {
+      void reloadHistory();
+    }
+  }, [isAuthenticated, isDashboardPage, isHistoryPage, isReportsPage, reloadHistory]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1117,6 +1143,37 @@ export default function DashboardPage() {
       const decoder = new TextDecoder();
       let buffer = "";
 
+      let finalScores: Record<string, number> | null = null;
+      let finalReport: CognitiveReport | null = null;
+      let finalSessionId = sessionId ?? "";
+      let didPersistHistory = false;
+
+      const normalizeScores = (rawScores: Record<string, number | { overall: number }>) => {
+        const scores: Record<string, number> = {};
+        for (const [key, val] of Object.entries(rawScores)) {
+          scores[key] = typeof val === "number" ? val : val.overall;
+        }
+        return scores;
+      };
+
+      const persistHistory = () => {
+        if (didPersistHistory || !finalScores || !finalReport) {
+          return;
+        }
+
+        didPersistHistory = true;
+
+        void addEntry({
+          inputType: input.type === "transcript" ? "transcript" : "text",
+          inputSnippet: ("content" in input ? input.content : "").slice(0, 300),
+          scores: finalScores,
+          report: finalReport,
+          sessionId: finalSessionId,
+          wordTimestamps: input.type === "transcript" ? input.wordTimestamps : undefined,
+          audioDuration: input.type === "transcript" ? input.duration : undefined,
+        });
+      };
+
       const processLine = (line: string) => {
         const t = line.trim();
         if (!t) return;
@@ -1125,32 +1182,39 @@ export default function DashboardPage() {
           if (ev.type === "step" && ev.step) {
             setAgentSteps((prev) => prev.map((s) => s.name === ev.step.name ? { ...s, status: ev.step.status, detail: ev.step.detail } : s));
           } else if (ev.type === "end") {
-            if (ev.session_id) setSessionId(ev.session_id);
-            if (ev.report) setCognitiveReport(ev.report as CognitiveReport);
+            if (ev.session_id) {
+              finalSessionId = ev.session_id;
+              setSessionId(ev.session_id);
+            }
+
+            if (ev.report) {
+              finalReport = ev.report as CognitiveReport;
+              setCognitiveReport(finalReport);
+            }
+
             if (ev.scores) {
               console.log("RAW SCORES:", ev.scores);
               // Handle both flat ({ lexical: 0.72 }) and nested ({ lexical: { overall: 0.72 } }) shapes
               const raw = ev.scores as Record<string, number | { overall: number }>;
-              const scores: Record<string, number> = {};
-              for (const [key, val] of Object.entries(raw)) {
-                scores[key] = typeof val === "number" ? val : val.overall;
-              }
+              const scores = normalizeScores(raw);
+              finalScores = scores;
               setBiomarkerScores(scores);
               setActivations(CORTEX_REGIONS.map((r) => ({ ...r, activation: scores[AGENT_KEY[r.agent]] ?? r.activation })));
-              // Save to history when we have both scores and report
-              if (ev.report) {
-                void addEntry({
-                  inputType: input.type === "transcript" ? "transcript" : "text",
-                  inputSnippet: ("content" in input ? input.content : "").slice(0, 300),
-                  scores,
-                  report: ev.report as CognitiveReport,
-                  sessionId: ev.session_id ?? "",
-                  wordTimestamps: input.type === "transcript" ? input.wordTimestamps : undefined,
-                  audioDuration: input.type === "transcript" ? input.duration : undefined,
-                });
-              }
             }
+
+            persistHistory();
             setAgentSteps((prev) => prev.map((s) => ({ ...s, status: "done" as const })));
+          } else if (ev.type === "report" && ev.report) {
+            finalReport = ev.report as CognitiveReport;
+            setCognitiveReport(finalReport);
+            persistHistory();
+          } else if (ev.type === "scores" && ev.scores) {
+            const raw = ev.scores as Record<string, number | { overall: number }>;
+            const scores = normalizeScores(raw);
+            finalScores = scores;
+            setBiomarkerScores(scores);
+            setActivations(CORTEX_REGIONS.map((r) => ({ ...r, activation: scores[AGENT_KEY[r.agent]] ?? r.activation })));
+            persistHistory();
           } else if (ev.type === "error") {
             setAgentSteps((prev) => prev.map((s) => s.status === "running" ? { ...s, status: "error" as const } : s));
           }
@@ -1306,211 +1370,186 @@ export default function DashboardPage() {
           <div className="relative flex-1 min-h-0 overflow-hidden">
 
             {/* ══════ DASHBOARD VIEW ══════ */}
-            <div
-              className="absolute inset-0 transition-all duration-[350ms] ease-out"
-              style={{
-                opacity: activePage === "dashboard" ? 1 : 0,
-                transform: activePage === "dashboard" ? "none" : "translateY(12px)",
-                pointerEvents: activePage === "dashboard" ? "auto" : "none",
-              }}
-              aria-hidden={activePage !== "dashboard"}
-            >
-              <MissionControlView
-                entries={historyEntries}
-                onStartAnalysis={() => {
-                  setActivePage("analysis");
-                  setHasStarted(false);
-                }}
-              />
-            </div>
+            {isDashboardPage && (
+              <div className="absolute inset-0" aria-hidden={!isDashboardPage}>
+                <MissionControlView
+                  entries={historyEntries}
+                  onStartAnalysis={() => {
+                    setActivePage("analysis");
+                    setHasStarted(false);
+                  }}
+                />
+              </div>
+            )}
 
             {/* ══════ HISTORY VIEW ══════ */}
-            <div
-              className="absolute inset-0 transition-all duration-[350ms] ease-out"
-              style={{
-                opacity: activePage === "history" ? 1 : 0,
-                transform: activePage === "history" ? "none" : "translateY(12px)",
-                pointerEvents: activePage === "history" ? "auto" : "none",
-              }}
-              aria-hidden={activePage !== "history"}
-            >
-              <SessionHistoryPanel
-                entries={historyEntries}
-                onRestore={handleRestore}
-                onRemove={(id) => { void removeEntry(id); }}
-                onClearAll={() => { void clearAll(); }}
-              />
-            </div>
+            {isHistoryPage && (
+              <div className="absolute inset-0" aria-hidden={!isHistoryPage}>
+                <SessionHistoryPanel
+                  entries={historyEntries}
+                  onRestore={handleRestore}
+                  onRemove={(id) => { void removeEntry(id); }}
+                  onClearAll={() => { void clearAll(); }}
+                />
+              </div>
+            )}
+
+            {/* ══════ REPORTS VIEW ══════ */}
+            {isReportsPage && (
+              <div className="absolute inset-0" aria-hidden={!isReportsPage}>
+                <SessionHistoryPanel
+                  entries={historyEntries}
+                  onRestore={handleRestore}
+                  onRemove={(id) => { void removeEntry(id); }}
+                  onClearAll={() => { void clearAll(); }}
+                />
+              </div>
+            )}
 
             {/* ══════ BRAIN REGIONS VIEW ══════ */}
-            <div
-              className="absolute inset-0 transition-all duration-[350ms] ease-out"
-              style={{
-                opacity: activePage === "brain regions" ? 1 : 0,
-                transform: activePage === "brain regions" ? "none" : "translateY(12px)",
-                pointerEvents: activePage === "brain regions" ? "auto" : "none",
-              }}
-              aria-hidden={activePage !== "brain regions"}
-            >
-              <CortexRegionsPanel />
-            </div>
+            {isBrainRegionsPage && (
+              <div className="absolute inset-0" aria-hidden={!isBrainRegionsPage}>
+                <CortexRegionsPanel />
+              </div>
+            )}
             {/* ══════ BIOMARKERS VIEW ══════ */}
-            <div
-              className="absolute inset-0 transition-all duration-[350ms] ease-out"
-              style={{
-                opacity: activePage === "biomarkers" ? 1 : 0,
-                transform: activePage === "biomarkers" ? "none" : "translateY(12px)",
-                pointerEvents: activePage === "biomarkers" ? "auto" : "none",
-              }}
-              aria-hidden={activePage !== "biomarkers"}
-            >
-              <BiomarkersPanel />
-            </div>
+            {isBiomarkersPage && (
+              <div className="absolute inset-0" aria-hidden={!isBiomarkersPage}>
+                <BiomarkersPanel />
+              </div>
+            )}
 
             {/* ══════ PHASE 1 — Pre-submission + Processing ══════ */}
-            <div
-              className="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-8 transition-all duration-[400ms] ease-out overflow-y-auto"
-              style={{
-                opacity: (hasStarted && !isLoading) || activePage === "history" || activePage === "brain regions" || activePage === "biomarkers" || activePage === "dashboard" ? 0 : 1,
-                transform: hasStarted && !isLoading ? "translateY(-24px)" : "translateY(0)",
-                pointerEvents: (hasStarted && !isLoading) || activePage === "history" || activePage === "brain regions" || activePage === "biomarkers" || activePage === "dashboard" ? "none" : "auto",
-              }}
-              aria-hidden={(hasStarted && !isLoading) || activePage === "history" || activePage === "brain regions" || activePage === "biomarkers" || activePage === "dashboard"}
-            >
-              <div className="w-full max-w-[42rem] flex flex-col items-center gap-5 py-6 sm:py-8">
+            {showPhase1 && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-8 overflow-y-auto">
+                <div className="w-full max-w-[42rem] flex flex-col items-center gap-5 py-6 sm:py-8">
 
-                {/* Title */}
-                <div className="flex flex-col items-center gap-2">
-                  <span
-                    className="text-[30px] font-light tracking-[0.14em]"
-                    style={{
-                      fontFamily: "var(--font-syne), sans-serif",
-                      color: "var(--nt-text-hi)",
-                      textShadow: "0 0 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.14)",
-                    }}
-                  >
-                    cortexflow
-                  </span>
-                  <span
-                    className="text-[11px] tracking-[0.32em] uppercase font-medium"
-                    style={{
-                      color: "var(--nt-text-md)",
-                      textShadow: "0 1px 4px rgba(0,0,0,0.12)",
-                    }}
-                  >
-                    cognitive signature analysis
-                  </span>
-                </div>
-
-                {/* Agent pipeline — appears above input while processing */}
-                {agentSteps.length > 0 && (
-                  <div className="w-full">
-                    <ProcessingSteps steps={agentSteps} glass={glassStyle} />
+                  {/* Title */}
+                  <div className="flex flex-col items-center gap-2">
+                    <span
+                      className="text-[30px] font-light tracking-[0.14em]"
+                      style={{
+                        fontFamily: "var(--font-syne), sans-serif",
+                        color: "var(--nt-text-hi)",
+                        textShadow: "0 0 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.14)",
+                      }}
+                    >
+                      cortexflow
+                    </span>
+                    <span
+                      className="text-[11px] tracking-[0.32em] uppercase font-medium"
+                      style={{
+                        color: "var(--nt-text-md)",
+                        textShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                      }}
+                    >
+                      cognitive signature analysis
+                    </span>
                   </div>
-                )}
-                {/* Input panel — dimmed while agents are running */}
-                <div
-                  className="w-full transition-opacity duration-300"
-                  style={{ opacity: isLoading ? 0.45 : 1, pointerEvents: isLoading ? "none" : "auto" }}
-                >
-                  <InputCommandPanel
-                    onSubmit={handleSubmit}
-                    isLoading={isLoading}
-                    agentSteps={[]}
-                    placeholder="Paste text or record speech to begin analysis…"
-                  />
-                </div>
 
+                  {/* Agent pipeline — appears above input while processing */}
+                  {agentSteps.length > 0 && (
+                    <div className="w-full">
+                      <ProcessingSteps steps={agentSteps} glass={glassStyle} />
+                    </div>
+                  )}
+                  {/* Input panel — dimmed while agents are running */}
+                  <div
+                    className="w-full transition-opacity duration-300"
+                    style={{ opacity: isLoading ? 0.45 : 1, pointerEvents: isLoading ? "none" : "auto" }}
+                  >
+                    <InputCommandPanel
+                      onSubmit={handleSubmit}
+                      isLoading={isLoading}
+                      agentSteps={[]}
+                      placeholder="Paste text or record speech to begin analysis…"
+                    />
+                  </div>
+
+                </div>
               </div>
-            </div>
+            )}
 
             {/* ══════ PHASE 2 — Brain left · Report right · Input bottom ══════ */}
-            <div
-              className="absolute inset-0 flex flex-col gap-2.5 transition-all duration-[400ms] ease-out"
-              style={{
-                opacity: hasStarted && !isLoading && activePage !== "history" && activePage !== "brain regions" && activePage !== "biomarkers" && activePage !== "dashboard" ? 1 : 0,
-                transform: hasStarted && !isLoading ? "none" : "translateY(24px)",
-                pointerEvents: hasStarted && !isLoading && activePage !== "history" && activePage !== "brain regions" && activePage !== "biomarkers" && activePage !== "dashboard" ? "auto" : "none",
-                padding: isMobileLayout ? "8px" : "10px",
-              }}
-              aria-hidden={!hasStarted || isLoading || activePage === "history" || activePage === "brain regions" || activePage === "biomarkers" || activePage === "dashboard"}
-            >
-              {/* ── Top row: Brain + Report ── */}
-              <div className="flex flex-col lg:flex-row gap-2.5 flex-1 min-h-0">
+            {showPhase2 && (
+              <div className="absolute inset-0 flex flex-col gap-2.5" style={{ padding: isMobileLayout ? "8px" : "10px" }}>
+                {/* ── Top row: Brain + Report ── */}
+                <div className="flex flex-col lg:flex-row gap-2.5 flex-1 min-h-0">
 
-              {/* ── LEFT: Brain viewer (60%) ── */}
-              <div
-                className="rounded-2xl overflow-hidden relative min-h-[280px] lg:min-h-0"
-                style={{ flex: isMobileLayout ? "0 0 clamp(260px, 42vh, 360px)" : "3 0 0%", ...glassStyle }}
-              >
-                {/* MNI badge */}
-                <div className="absolute top-3 left-3 z-10 px-2 py-0.5 rounded-md text-[9px] font-semibold tracking-widest uppercase pointer-events-none"
-                  style={{ background: "var(--nt-glass)", backdropFilter: "blur(8px)", color: "var(--nt-text-lo)", border: "1px solid var(--nt-glass-border)", fontFamily: "var(--font-jetbrains-mono)" }}>
-                  MNI152 · 3D Atlas
-                </div>
-
-                {/* Activation legend */}
-                {biomarkerScores && (
-                  <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-1 p-2 rounded-xl pointer-events-none"
-                    style={{ background: "var(--nt-glass)", backdropFilter: "blur(8px)", border: "1px solid var(--nt-glass-border)" }}>
-                    {CORTEX_REGIONS.map((r) => {
-                      const score = biomarkerScores[AGENT_KEY[r.agent]] ?? 0;
-                      const color = scoreColor(score * 100);
-                      return (
-                        <div key={r.region} className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: color, opacity: 0.4 + score * 0.6 }} />
-                          <span className="text-[9px] uppercase tracking-wider" style={{ color: "var(--nt-text-lo)", fontFamily: "var(--font-jetbrains-mono)", minWidth: 70 }}>{r.region}</span>
-                          <div className="w-12 h-0.5 rounded-full overflow-hidden" style={{ background: "var(--nt-track)" }}>
-                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score * 100}%`, background: color }} />
-                          </div>
-                          <span className="text-[9px] tabular-nums w-6 text-right" style={{ color, fontFamily: "var(--font-jetbrains-mono)" }}>{Math.round(score * 100)}</span>
-                        </div>
-                      );
-                    })}
+                {/* ── LEFT: Brain viewer (60%) ── */}
+                <div
+                  className="rounded-2xl overflow-hidden relative min-h-[280px] lg:min-h-0"
+                  style={{ flex: isMobileLayout ? "0 0 clamp(260px, 42vh, 360px)" : "3 0 0%", ...glassStyle }}
+                >
+                  {/* MNI badge */}
+                  <div className="absolute top-3 left-3 z-10 px-2 py-0.5 rounded-md text-[9px] font-semibold tracking-widest uppercase pointer-events-none"
+                    style={{ background: "var(--nt-glass)", backdropFilter: "blur(8px)", color: "var(--nt-text-lo)", border: "1px solid var(--nt-glass-border)", fontFamily: "var(--font-jetbrains-mono)" }}>
+                    MNI152 · 3D Atlas
                   </div>
-                )}
-                <div className="absolute bottom-3 right-3 z-10 text-[9px] pointer-events-none"
-                  style={{ color: "var(--nt-text-ghost)", fontFamily: "var(--font-jetbrains-mono)" }}>
-                  Drag · Scroll to zoom
+
+                  {/* Activation legend */}
+                  {biomarkerScores && (
+                    <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-1 p-2 rounded-xl pointer-events-none"
+                      style={{ background: "var(--nt-glass)", backdropFilter: "blur(8px)", border: "1px solid var(--nt-glass-border)" }}>
+                      {CORTEX_REGIONS.map((r) => {
+                        const score = biomarkerScores[AGENT_KEY[r.agent]] ?? 0;
+                        const color = scoreColor(score * 100);
+                        return (
+                          <div key={r.region} className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: color, opacity: 0.4 + score * 0.6 }} />
+                            <span className="text-[9px] uppercase tracking-wider" style={{ color: "var(--nt-text-lo)", fontFamily: "var(--font-jetbrains-mono)", minWidth: 70 }}>{r.region}</span>
+                            <div className="w-12 h-0.5 rounded-full overflow-hidden" style={{ background: "var(--nt-track)" }}>
+                              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score * 100}%`, background: color }} />
+                            </div>
+                            <span className="text-[9px] tabular-nums w-6 text-right" style={{ color, fontFamily: "var(--font-jetbrains-mono)" }}>{Math.round(score * 100)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="absolute bottom-3 right-3 z-10 text-[9px] pointer-events-none"
+                    style={{ color: "var(--nt-text-ghost)", fontFamily: "var(--font-jetbrains-mono)" }}>
+                    Drag · Scroll to zoom
+                  </div>
+
+                  <SignalFieldViewer activations={activations} onRegionClick={(r) => console.log("Region clicked:", r)} activeAgentName={activeAgentName} />
                 </div>
 
-                <SignalFieldViewer activations={activations} onRegionClick={(r) => console.log("Region clicked:", r)} activeAgentName={activeAgentName} />
-              </div>
-
-              {/* ── RIGHT: Report (40%) — always visible ── */}
-              <div
-                className="rounded-2xl overflow-hidden flex flex-col min-h-[220px] lg:min-h-0"
-                style={{ flex: isMobileLayout ? "1 1 auto" : "2 0 0%", ...glassStyle }}
-              >
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                  {cognitiveReport ? (
-                    <>
-                      <CognitionReportPanel report={cognitiveReport} />
-                      {wordTimestamps && wordTimestamps.length > 0 && (
-                        <div className="px-1 pb-2">
-                          <SpeechWavePanel wordTimestamps={wordTimestamps} duration={audioDuration} />
-                        </div>
-                      )}
-                    </>
-                  ) : null}
+                {/* ── RIGHT: Report (40%) — always visible ── */}
+                <div
+                  className="rounded-2xl overflow-hidden flex flex-col min-h-[220px] lg:min-h-0"
+                  style={{ flex: isMobileLayout ? "1 1 auto" : "2 0 0%", ...glassStyle }}
+                >
+                  <div className="flex-1 min-h-0 overflow-y-auto">
+                    {cognitiveReport ? (
+                      <>
+                        <CognitionReportPanel report={cognitiveReport} />
+                        {wordTimestamps && wordTimestamps.length > 0 && (
+                          <div className="px-1 pb-2">
+                            <SpeechWavePanel wordTimestamps={wordTimestamps} duration={audioDuration} />
+                          </div>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
 
-              </div>{/* end top row */}
+                </div>{/* end top row */}
 
-              {/* ── BOTTOM CENTER: Chat input ── */}
-              <div className="shrink-0 flex justify-center">
-                <div style={{ width: "100%", maxWidth: isMobileLayout ? 999 : 660 }}>
-                  <InputCommandPanel
-                    onSubmit={handleSubmit}
-                    isLoading={isLoading}
-                    agentSteps={[]}
-                    placeholder="Analyze again or ask a follow-up…"
-                  />
+                {/* ── BOTTOM CENTER: Chat input ── */}
+                <div className="shrink-0 flex justify-center">
+                  <div style={{ width: "100%", maxWidth: isMobileLayout ? 999 : 660 }}>
+                    <InputCommandPanel
+                      onSubmit={handleSubmit}
+                      isLoading={isLoading}
+                      agentSteps={[]}
+                      placeholder="Analyze again or ask a follow-up…"
+                    />
+                  </div>
                 </div>
-              </div>
 
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
