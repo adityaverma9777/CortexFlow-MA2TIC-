@@ -21,25 +21,23 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getSupabaseServerClient();
-    const { data: user } = await supabase
-      .from("users")
-      .select("id, email, display_name, photo_url, provider")
+    const { data: credential } = await supabase
+      .from("user_credentials")
+      .select("user_id, password_hash")
       .eq("email", email)
       .maybeSingle();
 
-    if (!user) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
-    }
-
-    const { data: credential } = await supabase
-      .from("user_credentials")
-      .select("password_hash")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
     if (!credential) {
-      if (user.provider && user.provider !== "password") {
-        const providerName = providerDisplayName(user.provider);
+      const { data: providerRows } = await supabase
+        .from("users")
+        .select("provider")
+        .eq("email", email)
+        .order("created_at", { ascending: true });
+
+      const socialProvider = (providerRows ?? []).find((row) => row.provider && row.provider !== "password")?.provider;
+
+      if (socialProvider) {
+        const providerName = providerDisplayName(socialProvider);
         return NextResponse.json(
           { error: `This email is linked to ${providerName} sign-in. Please use that method.` },
           { status: 409 }
@@ -51,6 +49,16 @@ export async function POST(req: NextRequest) {
 
     const valid = verifyPassword(password, credential.password_hash);
     if (!valid) {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
+
+    const { data: user } = await supabase
+      .from("users")
+      .select("id, email, display_name, photo_url, provider")
+      .eq("id", credential.user_id)
+      .maybeSingle();
+
+    if (!user) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 

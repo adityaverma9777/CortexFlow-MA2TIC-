@@ -3,7 +3,6 @@ import {
   createSession,
   hashPassword,
   normalizeEmail,
-  providerDisplayName,
   setSessionCookie,
 } from "@/libs/local-auth";
 import { getSupabaseServerClient } from "@/libs/supabase-server";
@@ -26,49 +25,66 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getSupabaseServerClient();
-    const { data: existingUser } = await supabase
-      .from("users")
-      .select("id, provider")
+    const { data: existingCredential } = await supabase
+      .from("user_credentials")
+      .select("user_id")
       .eq("email", email)
       .maybeSingle();
 
-    if (existingUser) {
-      const { data: credential } = await supabase
-        .from("user_credentials")
-        .select("user_id")
-        .eq("user_id", existingUser.id)
-        .maybeSingle();
-
-      if (credential || existingUser.provider === "password") {
-        return NextResponse.json(
-          { error: "This email already has an account. Please sign in." },
-          { status: 409 }
-        );
-      }
-
-      if (existingUser.provider) {
-        const providerName = providerDisplayName(existingUser.provider);
-        return NextResponse.json(
-          { error: `This email is linked to ${providerName} sign-in. Please use that method.` },
-          { status: 409 }
-        );
-      }
+    if (existingCredential?.user_id) {
+      return NextResponse.json(
+        { error: "This email already has an account. Please sign in." },
+        { status: 409 }
+      );
     }
 
-    const userId = crypto.randomUUID();
+    const { data: usersByEmail } = await supabase
+      .from("users")
+      .select("id, provider, display_name")
+      .eq("email", email)
+      .order("created_at", { ascending: true });
+
+    const linkedUser =
+      (usersByEmail ?? []).find((user) => user.provider === "password")
+      ?? (usersByEmail ?? []).find((user) => Boolean(user.provider))
+      ?? (usersByEmail ?? [])[0]
+      ?? null;
+
+    const userId = linkedUser?.id ?? crypto.randomUUID();
     const now = new Date().toISOString();
+    const displayName = linkedUser?.display_name || name || email.split("@")[0] || "Researcher";
+    const provider = linkedUser?.provider ?? "password";
 
-    const { error: userInsertError } = await supabase.from("users").insert({
-      id: userId,
-      email,
-      display_name: name || email.split("@")[0] || "Researcher",
-      provider: "password",
-      last_login_at: now,
-      updated_at: now,
-    });
+    let userWriteError: string | null = null;
 
-    if (userInsertError) {
-      return NextResponse.json({ error: userInsertError.message }, { status: 500 });
+    if (linkedUser) {
+      const { error } = await supabase
+        .from("users")
+        .update({
+          email,
+          display_name: displayName,
+          provider,
+          last_login_at: now,
+          updated_at: now,
+        })
+        .eq("id", userId);
+
+      userWriteError = error?.message ?? null;
+    } else {
+      const { error } = await supabase.from("users").insert({
+        id: userId,
+        email,
+        display_name: displayName,
+        provider,
+        last_login_at: now,
+        updated_at: now,
+      });
+
+      userWriteError = error?.message ?? null;
+    }
+
+    if (userWriteError) {
+      return NextResponse.json({ error: userWriteError }, { status: 500 });
     }
 
     const { error: credentialError } = await supabase.from("user_credentials").insert({
@@ -79,7 +95,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (credentialError) {
-      await supabase.from("users").delete().eq("id", userId);
+      if (!linkedUser) {
+        await supabase.from("users").delete().eq("id", userId);
+      }
+
       return NextResponse.json({ error: credentialError.message }, { status: 500 });
     }
 
@@ -89,9 +108,9 @@ export async function POST(req: NextRequest) {
       user: {
         uid: userId,
         email,
-        name: name || email.split("@")[0] || "Researcher",
+        name: displayName,
         photoUrl: "",
-        providerId: "password",
+        providerId: provider,
       },
     });
 

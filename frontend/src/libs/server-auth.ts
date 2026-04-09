@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { getFirebaseAdminAuth } from "@/libs/firebase-admin";
-import { getSessionUserFromRequest } from "@/libs/local-auth";
+import { getSessionUserFromRequest, normalizeEmail } from "@/libs/local-auth";
+import { getSupabaseServerClient } from "@/libs/supabase-server";
 
 export type VerifiedUser = {
   uid: string;
@@ -45,6 +46,43 @@ function getOptionalBearerToken(req: NextRequest): string | null {
   return token || null;
 }
 
+async function resolveCanonicalUid(firebaseUid: string, rawEmail: string | null): Promise<string> {
+  const email = rawEmail ? normalizeEmail(rawEmail) : "";
+  const supabase = getSupabaseServerClient();
+
+  if (email) {
+    const { data: credential } = await supabase
+      .from("user_credentials")
+      .select("user_id")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (credential?.user_id) {
+      return credential.user_id;
+    }
+
+    const { data: byEmail } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (byEmail?.id) {
+      return byEmail.id;
+    }
+  }
+
+  const { data: byUid } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", firebaseUid)
+    .maybeSingle();
+
+  return byUid?.id ?? firebaseUid;
+}
+
 export async function requireVerifiedUser(req: NextRequest): Promise<VerifiedUser> {
   const token = getBearerToken(req);
   const decoded = await getFirebaseAdminAuth().verifyIdToken(token, true);
@@ -64,8 +102,10 @@ export async function requireAuthenticatedUser(req: NextRequest): Promise<Verifi
   if (bearerToken) {
     try {
       const decoded = await getFirebaseAdminAuth().verifyIdToken(bearerToken, true);
+      const canonicalUid = await resolveCanonicalUid(decoded.uid, decoded.email ?? null);
+
       return {
-        uid: decoded.uid,
+        uid: canonicalUid,
         email: decoded.email ?? null,
         name: decoded.name ?? null,
         picture: decoded.picture ?? null,
