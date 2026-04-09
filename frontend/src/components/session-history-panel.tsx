@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { IconClockHour4, IconTrash, IconChevronRight, IconMicrophone, IconTextSize, IconBrain, IconX } from "@tabler/icons-react";
 import type { HistoryEntry } from "@/hooks/useSessionHistory";
-import type { CognitiveReport } from "@/components/cognition-report-panel";
 
 type SessionHistoryPanelProps = { entries: HistoryEntry[]; onRestore: (entry: HistoryEntry) => void; onRemove: (id: string) => void; onClearAll: () => void };
 
@@ -37,26 +36,33 @@ function scoreColor(pct: number) {
   return pct > 75 ? "#D85A30" : pct > 50 ? "#BA7517" : pct > 25 ? "#1D9E75" : "#7e8fa6";
 }
 
-// ─── Detail drawer ─────────────────────────────────────────────────────────────
+function Section({ children, last }: { children: React.ReactNode; last?: boolean }) {
+  return (
+    <div className="px-5 py-4" style={last ? {} : { borderBottom: "1px solid var(--nt-divider)" }}>
+      {children}
+    </div>
+  );
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[9px] uppercase tracking-widest font-medium block mb-1.5" style={{ color: "var(--nt-text-ghost)", fontFamily: "var(--font-jetbrains-mono)" }}>
+      {children}
+    </span>
+  );
+}
+
+
+// Detail drawer
 
 function EntryDetail({ entry, onRestore, onClose, onRemove }: { entry: HistoryEntry; onRestore: () => void; onClose: () => void; onRemove: () => void }) {
   const risk    = RISK_CONFIG[entry.report.risk_level] ?? RISK_CONFIG.moderate;
   const loadPct = Math.round((entry.report.overall_cognitive_load ?? 0) * 100);
 
-  const Section = ({ children, last }: { children: React.ReactNode; last?: boolean }) => (
-    <div className="px-5 py-4" style={last ? {} : { borderBottom: "1px solid var(--nt-divider)" }}>
-      {children}
-    </div>
-  );
-  const Label = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-[9px] uppercase tracking-widest font-medium block mb-1.5" style={{ color: "var(--nt-text-ghost)", fontFamily: "var(--font-jetbrains-mono)" }}>
-      {children}
-    </span>
-  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(4px)" }} onClick={onClose}>
-      <div className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl flex flex-col" style={MODAL} onClick={(e) => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-2xl flex flex-col" style={MODAL} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid var(--nt-divider)", background: "var(--nt-glass-hi)", backdropFilter: "blur(12px)" }}>
           <div className="flex items-center gap-2.5">
@@ -178,7 +184,7 @@ function EntryDetail({ entry, onRestore, onClose, onRemove }: { entry: HistoryEn
   );
 }
 
-// ─── History card ──────────────────────────────────────────────────────────────
+// History card
 
 function HistoryCard({ entry, onSelect, onRemove }: { entry: HistoryEntry; onSelect: () => void; onRemove: (e: React.MouseEvent) => void }) {
   const risk = RISK_CONFIG[entry.report.risk_level] ?? RISK_CONFIG.moderate;
@@ -192,15 +198,15 @@ function HistoryCard({ entry, onSelect, onRemove }: { entry: HistoryEntry; onSel
       <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-xl" style={{ background: risk.color, opacity: 0.75 }} />
 
       <div className="pl-4 pr-3 py-3 flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             {entry.inputType === "transcript"
               ? <IconMicrophone size={10} style={{ color: "var(--nt-icon)" }} className="shrink-0" />
               : <IconTextSize    size={10} style={{ color: "var(--nt-icon)" }} className="shrink-0" />
             }
-            <span className="text-[10px]" style={{ color: "var(--nt-text-ghost)", fontFamily: "var(--font-jetbrains-mono)" }}>{relativeTime(entry.timestamp)}</span>
+            <span className="text-[10px] truncate max-w-[42vw] sm:max-w-none" style={{ color: "var(--nt-text-ghost)", fontFamily: "var(--font-jetbrains-mono)" }}>{relativeTime(entry.timestamp)}</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ color: risk.color, background: risk.bg }}>{risk.label}</span>
             <button onClick={onRemove} className="nt-nav-btn opacity-0 group-hover:opacity-100 w-5 h-5 rounded-md flex items-center justify-center hover:text-red-500">
               <IconTrash size={11} />
@@ -229,7 +235,7 @@ function HistoryCard({ entry, onSelect, onRemove }: { entry: HistoryEntry; onSel
     </div>
   );
 }
-// ─── Main panel ───────────────────────────────────────────────────────────────
+// Main panel
 
 export function SessionHistoryPanel({ entries, onRestore, onRemove, onClearAll }: SessionHistoryPanelProps) {
   const [selected, setSelected] = useState<HistoryEntry | null>(null);
@@ -250,8 +256,8 @@ export function SessionHistoryPanel({ entries, onRestore, onRemove, onClearAll }
 
   return (
     <>
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: "1px solid var(--nt-divider)" }}>
+      <div className="flex flex-col h-full overflow-x-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 shrink-0" style={{ borderBottom: "1px solid var(--nt-divider)" }}>
           <div className="flex items-center gap-2">
             <IconClockHour4 size={13} style={{ color: "var(--nt-icon)" }} />
             <span className="text-[11px] font-medium" style={{ color: "var(--nt-text-lo)" }}>{entries.length} {entries.length === 1 ? "analysis" : "analyses"}</span>
@@ -260,7 +266,7 @@ export function SessionHistoryPanel({ entries, onRestore, onRemove, onClearAll }
             <IconTrash size={11} />Clear all
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2.5">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 flex flex-col gap-2.5">
           {entries.map((entry) => (
             <HistoryCard key={entry.id} entry={entry} onSelect={() => setSelected(entry)} onRemove={(e) => { e.stopPropagation(); onRemove(entry.id); }} />
           ))}

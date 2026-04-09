@@ -188,7 +188,7 @@ function BiomarkersPanel() {
   };
 
   return (
-    <div className="h-full overflow-y-auto" style={{ padding: "16px 18px 24px" }}>
+    <div className="h-full overflow-y-auto overflow-x-hidden" style={{ padding: "16px 18px 24px" }}>
       {}
       <div className="mb-5">
         <div className="flex items-baseline gap-3 mb-1">
@@ -428,7 +428,7 @@ function CortexRegionsPanel() {
   const [hoveredAtlasRegion, setHoveredAtlasRegion] = useState<SignalRegionActivation | null>(null);
 
   return (
-    <div className="h-full overflow-y-auto" style={{ padding: "16px 18px 24px" }}>
+    <div className="h-full overflow-y-auto overflow-x-hidden" style={{ padding: "16px 18px 24px" }}>
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-baseline gap-3 mb-1">
@@ -1371,7 +1371,7 @@ export default function DashboardPage() {
 
             {/* ══════ DASHBOARD VIEW ══════ */}
             {isDashboardPage && (
-              <div className="absolute inset-0" aria-hidden={!isDashboardPage}>
+              <div className="absolute inset-0 overflow-x-hidden" aria-hidden={!isDashboardPage}>
                 <MissionControlView
                   entries={historyEntries}
                   onStartAnalysis={() => {
@@ -1384,7 +1384,7 @@ export default function DashboardPage() {
 
             {/* ══════ HISTORY VIEW ══════ */}
             {isHistoryPage && (
-              <div className="absolute inset-0" aria-hidden={!isHistoryPage}>
+              <div className="absolute inset-0 overflow-x-hidden" aria-hidden={!isHistoryPage}>
                 <SessionHistoryPanel
                   entries={historyEntries}
                   onRestore={handleRestore}
@@ -1396,7 +1396,7 @@ export default function DashboardPage() {
 
             {/* ══════ REPORTS VIEW ══════ */}
             {isReportsPage && (
-              <div className="absolute inset-0" aria-hidden={!isReportsPage}>
+              <div className="absolute inset-0 overflow-x-hidden" aria-hidden={!isReportsPage}>
                 <SessionHistoryPanel
                   entries={historyEntries}
                   onRestore={handleRestore}
@@ -1408,20 +1408,20 @@ export default function DashboardPage() {
 
             {/* ══════ BRAIN REGIONS VIEW ══════ */}
             {isBrainRegionsPage && (
-              <div className="absolute inset-0" aria-hidden={!isBrainRegionsPage}>
+              <div className="absolute inset-0 overflow-x-hidden" aria-hidden={!isBrainRegionsPage}>
                 <CortexRegionsPanel />
               </div>
             )}
             {/* ══════ BIOMARKERS VIEW ══════ */}
             {isBiomarkersPage && (
-              <div className="absolute inset-0" aria-hidden={!isBiomarkersPage}>
+              <div className="absolute inset-0 overflow-x-hidden" aria-hidden={!isBiomarkersPage}>
                 <BiomarkersPanel />
               </div>
             )}
 
             {/* ══════ PHASE 1 — Pre-submission + Processing ══════ */}
             {showPhase1 && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-8 overflow-y-auto">
+              <div className="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-8 overflow-y-auto overflow-x-hidden">
                 <div className="w-full max-w-[42rem] flex flex-col items-center gap-5 py-6 sm:py-8">
 
                   {/* Title */}
@@ -1472,7 +1472,7 @@ export default function DashboardPage() {
 
             {/* ══════ PHASE 2 — Brain left · Report right · Input bottom ══════ */}
             {showPhase2 && (
-              <div className="absolute inset-0 flex flex-col gap-2.5" style={{ padding: isMobileLayout ? "8px" : "10px" }}>
+              <div className="absolute inset-0 flex flex-col gap-2.5 overflow-y-auto overflow-x-hidden" style={{ padding: isMobileLayout ? "8px" : "10px" }}>
                 {/* ── Top row: Brain + Report ── */}
                 <div className="flex flex-col lg:flex-row gap-2.5 flex-1 min-h-0">
 
@@ -1489,19 +1489,19 @@ export default function DashboardPage() {
 
                   {/* Activation legend */}
                   {biomarkerScores && (
-                    <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-1 p-2 rounded-xl pointer-events-none"
+                    <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-1 p-2 rounded-xl pointer-events-none max-w-[calc(100%-1.5rem)]"
                       style={{ background: "var(--nt-glass)", backdropFilter: "blur(8px)", border: "1px solid var(--nt-glass-border)" }}>
                       {CORTEX_REGIONS.map((r) => {
                         const score = biomarkerScores[AGENT_KEY[r.agent]] ?? 0;
                         const color = scoreColor(score * 100);
                         return (
-                          <div key={r.region} className="flex items-center gap-2">
+                          <div key={r.region} className="flex items-center gap-2 min-w-0">
                             <div className="w-2 h-2 rounded-full shrink-0" style={{ background: color, opacity: 0.4 + score * 0.6 }} />
-                            <span className="text-[9px] uppercase tracking-wider" style={{ color: "var(--nt-text-lo)", fontFamily: "var(--font-jetbrains-mono)", minWidth: 70 }}>{r.region}</span>
-                            <div className="w-12 h-0.5 rounded-full overflow-hidden" style={{ background: "var(--nt-track)" }}>
+                            <span className="text-[9px] uppercase tracking-wider truncate max-w-[86px] sm:max-w-none" style={{ color: "var(--nt-text-lo)", fontFamily: "var(--font-jetbrains-mono)" }}>{r.region}</span>
+                            <div className="w-10 sm:w-12 h-0.5 rounded-full overflow-hidden" style={{ background: "var(--nt-track)" }}>
                               <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score * 100}%`, background: color }} />
                             </div>
-                            <span className="text-[9px] tabular-nums w-6 text-right" style={{ color, fontFamily: "var(--font-jetbrains-mono)" }}>{Math.round(score * 100)}</span>
+                            <span className="text-[9px] tabular-nums w-5 sm:w-6 text-right shrink-0" style={{ color, fontFamily: "var(--font-jetbrains-mono)" }}>{Math.round(score * 100)}</span>
                           </div>
                         );
                       })}

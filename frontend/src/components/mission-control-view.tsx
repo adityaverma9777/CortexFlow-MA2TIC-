@@ -165,7 +165,7 @@ function KpiCard({ label, value, sub, accentColor, icon, delay = 0, trend }: Kpi
 
   return (
     <div
-      className="animate-fade-up flex flex-col gap-2 p-4 rounded-2xl relative overflow-hidden min-w-0"
+      className="animate-fade-up flex flex-col gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-2xl relative overflow-hidden min-w-0 min-h-[104px] sm:min-h-[118px]"
       style={{ ...GLASS, animationDelay: `${delay}ms`, animationFillMode: "both" }}
     >
       {accentColor && (
@@ -184,7 +184,7 @@ function KpiCard({ label, value, sub, accentColor, icon, delay = 0, trend }: Kpi
         <span
           style={{
             color: "var(--nt-text-xs)",
-            fontSize: 9,
+            fontSize: 8,
             fontFamily: "var(--font-jetbrains-mono)",
             letterSpacing: "0.14em",
             textTransform: "uppercase",
@@ -199,7 +199,7 @@ function KpiCard({ label, value, sub, accentColor, icon, delay = 0, trend }: Kpi
           className="truncate"
           style={{
             color: accentColor ?? "var(--nt-text-hi)",
-            fontSize: 28,
+            fontSize: "clamp(18px, 5.2vw, 28px)",
             fontFamily: "var(--font-jetbrains-mono)",
             fontWeight: 700,
             lineHeight: 1,
@@ -214,7 +214,7 @@ function KpiCard({ label, value, sub, accentColor, icon, delay = 0, trend }: Kpi
       </div>
 
       {sub && (
-        <span className="truncate block" style={{ color: "var(--nt-text-xs)", fontSize: 10, fontFamily: "var(--font-dm-sans)" }}>
+        <span className="truncate block" style={{ color: "var(--nt-text-xs)", fontSize: 9, fontFamily: "var(--font-dm-sans)" }}>
           {sub}
         </span>
       )}
@@ -257,8 +257,8 @@ function RiskBadge({ level }: { level?: string }) {
 function DomainBar({ domain, score, delay = 0 }: { domain: Domain; score: number; delay?: number }) {
   const pct = Math.round(score * 100);
   return (
-    <div className="animate-fade-up flex items-center gap-3" style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}>
-      <div style={{ width: 64, color: "var(--nt-text-lo)", fontSize: 10, fontFamily: "var(--font-dm-sans)", flexShrink: 0 }}>
+    <div className="animate-fade-up flex items-center gap-2 sm:gap-3" style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}>
+      <div style={{ width: 52, color: "var(--nt-text-lo)", fontSize: 10, fontFamily: "var(--font-dm-sans)", flexShrink: 0 }} className="sm:w-16">
         {domain.label}
       </div>
       <div
@@ -275,8 +275,8 @@ function DomainBar({ domain, score, delay = 0 }: { domain: Domain; score: number
         />
       </div>
       <span
-        className="tabular-nums"
-        style={{ width: 28, textAlign: "right", color: domain.color, fontSize: 10, fontFamily: "var(--font-jetbrains-mono)", flexShrink: 0 }}
+        className="tabular-nums w-5 sm:w-7"
+        style={{ textAlign: "right", color: domain.color, fontSize: 10, fontFamily: "var(--font-jetbrains-mono)", flexShrink: 0 }}
       >
         {pct}
       </span>
@@ -394,7 +394,7 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
     For permissions and licensing inquiries, contact MA2TIC.
     ============================================================ */}
   return (
-    <div className="absolute inset-0 overflow-y-auto" style={{ padding: "12px 14px 18px" }}>
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden" style={{ padding: "12px 14px 18px" }}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 animate-fade-up" style={{ animationFillMode: "both" }}>
         <div>
           <h1
@@ -425,7 +425,7 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
           New analysis
         </button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-1 min-[560px]:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3 mb-3">
         <KpiCard
           label="Total Sessions"
           value={entries.length}
@@ -479,10 +479,10 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
       <div className="grid gap-3 mb-3 xl:grid-cols-[minmax(0,1fr)_260px]">
 
         <div
-          className="animate-fade-up rounded-2xl p-4"
+          className="animate-fade-up rounded-2xl p-3 sm:p-4"
           style={{ ...GLASS, animationDelay: "300ms", animationFillMode: "both" }}
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
               <div
                 style={{
@@ -509,8 +509,9 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
               ))}
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+          <div className="h-[168px] sm:h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
               <defs>
                 {DOMAINS.map((d) => (
                   <linearGradient key={d.key} id={`grad-${d.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -547,12 +548,13 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
                   activeDot={{ r: 3, fill: d.color, strokeWidth: 0 }}
                 />
               ))}
-            </AreaChart>
-          </ResponsiveContainer>
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div
-          className="animate-fade-up rounded-2xl p-4 flex flex-col"
+          className="animate-fade-up rounded-2xl p-3 sm:p-4 flex flex-col min-h-[252px]"
           style={{ ...GLASS, animationDelay: "360ms", animationFillMode: "both" }}
         >
           <div
@@ -569,11 +571,11 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
           <div style={{ color: "var(--nt-text-xs)", fontSize: 10, fontFamily: "var(--font-dm-sans)", marginBottom: 8 }}>
             Latest session
           </div>
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center min-h-[170px] sm:min-h-[188px]">
             <ProfileRadarChart scores={latest?.scores} />
           </div>
 
-          <div className="flex items-center justify-between mt-2 pt-2.5" style={{ borderTop: "1px solid var(--nt-divider)" }}>
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-2.5" style={{ borderTop: "1px solid var(--nt-divider)" }}>
             <RiskBadge level={latest?.report?.risk_level} />
             <div className="flex items-center gap-1.5">
               <span style={{ color: "var(--nt-text-xs)", fontSize: 9, fontFamily: "var(--font-jetbrains-mono)" }}>LOAD</span>
@@ -610,7 +612,7 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
       <div className="grid gap-3 lg:grid-cols-2">
 
         <div
-          className="animate-fade-up rounded-2xl p-4"
+          className="animate-fade-up rounded-2xl p-3 sm:p-4"
           style={{ ...GLASS, animationDelay: "420ms", animationFillMode: "both" }}
         >
           <div
@@ -628,7 +630,7 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
             Latest session scores
           </div>
 
-          <div className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-3">
             {DOMAINS.map((d, i) => (
               <div key={d.key} className="flex flex-col gap-1.5">
                 <DomainBar
@@ -636,7 +638,7 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
                   score={latest?.scores[d.key] ?? 0}
                   delay={440 + i * 40}
                 />
-                <div style={{ color: "var(--nt-text-ghost)", fontSize: 9, fontFamily: "var(--font-dm-sans)", paddingLeft: 67 }}>
+                <div className="pl-0 sm:pl-[67px] leading-tight whitespace-normal break-words" style={{ color: "var(--nt-text-ghost)", fontSize: 9, fontFamily: "var(--font-dm-sans)" }}>
                   {d.desc}
                 </div>
               </div>
@@ -663,7 +665,7 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
                     <div key={i} className="flex items-start gap-2">
                       <div className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ background: sev }} />
                       <span
-                        className="line-clamp-2"
+                        className="whitespace-normal break-words"
                         style={{ color: "var(--nt-text-lo)", fontSize: 10, fontFamily: "var(--font-dm-sans)", lineHeight: 1.5 }}
                       >
                         {ri.indicator}
@@ -677,7 +679,7 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
         </div>
 
         <div
-          className="animate-fade-up rounded-2xl p-4"
+          className="animate-fade-up rounded-2xl p-3 sm:p-4"
           style={{ ...GLASS, animationDelay: "480ms", animationFillMode: "both" }}
         >
           <div
@@ -694,14 +696,14 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
           <div style={{ color: "var(--nt-text-xs)", fontSize: 10, fontFamily: "var(--font-dm-sans)", marginBottom: 12 }}>
             Last {Math.min(entries.length, 8)} analyses
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 max-h-[340px] sm:max-h-[300px] lg:max-h-[256px] overflow-y-auto pr-0.5">
             {entries.slice(0, 8).map((entry, i) => {
               const load = Math.round((entry.report.overall_cognitive_load ?? 0) * 100);
               const isFirst = i === 0;
               return (
                 <div
                   key={entry.id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors duration-150 min-w-0 overflow-hidden"
+                  className="flex flex-wrap sm:flex-nowrap items-start sm:items-center gap-2.5 px-2.5 sm:px-3 py-2 rounded-xl transition-colors duration-150 min-w-0"
                   style={{
                     background: isFirst ? "var(--nt-active)" : "transparent",
                     border: isFirst ? "1px solid var(--nt-glass-border)" : "1px solid transparent",
@@ -716,14 +718,14 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
                       : <IconTextCaption size={13} style={{ color: "var(--nt-text-lo)" }} />}
                   </div>
 
-                  <div className="flex-1 min-w-0 overflow-hidden">
+                  <div className="flex-1 min-w-0 basis-full sm:basis-auto">
                     <div
-                      className="truncate"
-                      style={{ color: "var(--nt-text-md)", fontSize: 11, fontFamily: "var(--font-dm-sans)" }}
+                      className="whitespace-normal break-words leading-snug"
+                      style={{ color: "var(--nt-text-md)", fontSize: 10.5, fontFamily: "var(--font-dm-sans)" }}
                     >
                       {entry.inputSnippet || "—"}
                     </div>
-                    <div className="truncate" style={{ color: "var(--nt-text-xs)", fontSize: 9, fontFamily: "var(--font-jetbrains-mono)", marginTop: 1 }}>
+                    <div className="whitespace-normal" style={{ color: "var(--nt-text-xs)", fontSize: 8.5, fontFamily: "var(--font-jetbrains-mono)", marginTop: 1 }}>
                       {shortDate(entry.timestamp)} · {relativeTime(entry.timestamp)}
                     </div>
                   </div>
@@ -743,11 +745,11 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
 
     For permissions and licensing inquiries, contact MA2TIC.
     ============================================================ */}
-                  <div className="flex flex-col items-end gap-1 shrink-0">
+                  <div className="w-full sm:w-auto flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:gap-1 shrink-0 max-w-full ml-0 sm:ml-auto mt-1 sm:mt-0">
                     <RiskBadge level={entry.report?.risk_level} />
                     <div className="flex items-center gap-1.5">
                       <div
-                        className="w-16 h-0.5 rounded-full overflow-hidden"
+                        className="w-12 sm:w-16 h-0.5 rounded-full overflow-hidden"
                         style={{ background: "var(--nt-track)" }}
                       >
                         <div
