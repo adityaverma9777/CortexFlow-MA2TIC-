@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { LaunchSequence } from "@/components/launch-sequence";
+import { AuthPanel } from "@/components/auth-panel";
 import { WorkspaceSidebar } from "@/components/workspace-sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
 import { type SignalAgentCardProps } from "@/components/signal-agent-card";
@@ -13,8 +14,8 @@ import { MissionControlView } from "@/components/mission-control-view";
 import PrismSurface from "@/components/prism-surface";
 import type { SignalRegionActivation } from "@/components/signal-field-viewer";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useColorMode } from "@/hooks/useColorMode";
-import { ProfileRadarChart } from "@/components/profile-radar-chart";
 
 
 
@@ -675,6 +676,7 @@ function CortexRegionsPanel() {
           </div>
         </div>
       </div>
+
     </div>
   );
 }
@@ -872,8 +874,20 @@ function ProcessingSteps({ steps, glass }: { steps: AgentStep[]; glass: React.CS
 
 export default function DashboardPage() {
   const { isDark, toggle: toggleTheme } = useColorMode();
+  const {
+    isReady: isAuthReady,
+    isBusy: isAuthBusy,
+    profile,
+    idToken,
+    checkSignInMethods,
+    signInWithSocial,
+    signInWithEmail,
+    signUpWithEmail,
+    logOut,
+  } = useFirebaseAuth();
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { entries: historyEntries, addEntry, removeEntry, clearAll } = useSessionHistory();
+  const { entries: historyEntries, addEntry, removeEntry, clearAll } = useSessionHistory(idToken);
   const [hasStarted, setHasStarted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -885,6 +899,11 @@ export default function DashboardPage() {
   const [activePage, setActivePage] = useState("analysis");
   const [cognitiveReport, setCognitiveReport] = useState<CognitiveReport | undefined>();
   const [currentAgentIndex, setCurrentAgentIndex] = useState(0);
+  const [backendAwake, setBackendAwake] = useState(false);
+  const [splashCompleted, setSplashCompleted] = useState(false);
+  const [isBootstrappingAccount, setIsBootstrappingAccount] = useState(false);
+
+  const isAuthenticated = Boolean(profile && idToken);
 
   const agentCards = useMemo(() => {
     return activations.map((r) => {
@@ -912,6 +931,72 @@ export default function DashboardPage() {
     if (!running) return undefined;
     return { "Lexical agent": "Lexical", "Semantic agent": "Semantic", "Prosody agent": "Prosody", "Syntax agent": "Syntax" }[running.name];
   }, [agentSteps]);
+
+  useEffect(() => {
+    let isMounted = true;
+    let timeoutId: number | undefined;
+
+    const probe = async () => {
+      try {
+        const res = await fetch("/api/wake-backend", { method: "GET", cache: "no-store" });
+        const body = await res.json().catch(() => ({ ok: false }));
+
+        if (isMounted && body.ok) {
+          setBackendAwake(true);
+          return;
+        }
+      } catch {
+        // Keep probing until backend is available.
+      }
+
+      if (isMounted) {
+        timeoutId = window.setTimeout(() => {
+          void probe();
+        }, 1600);
+      }
+    };
+
+    void probe();
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!idToken) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      setIsBootstrappingAccount(true);
+      try {
+        await fetch("/api/account/bootstrap", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+      } catch {
+        // Bootstrap failure should not block signed-in users from using the app.
+      } finally {
+        if (!cancelled) {
+          setIsBootstrappingAccount(false);
+        }
+      }
+    };
+
+    void bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [idToken]);
 
   // Shift+P toggles side panels (kept for power users)
   useEffect(() => {
@@ -993,7 +1078,7 @@ export default function DashboardPage() {
               setActivations(CORTEX_REGIONS.map((r) => ({ ...r, activation: scores[AGENT_KEY[r.agent]] ?? r.activation })));
               // Save to history when we have both scores and report
               if (ev.report) {
-                addEntry({
+                void addEntry({
                   inputType: input.type === "transcript" ? "transcript" : "text",
                   inputSnippet: ("content" in input ? input.content : "").slice(0, 300),
                   scores,
@@ -1038,6 +1123,20 @@ export default function DashboardPage() {
     setActivePage("analysis");
   }, []);
 
+  const handleLogout = useCallback(() => {
+    void logOut();
+    setActivePage("analysis");
+    setHasStarted(false);
+    setIsLoading(false);
+    setSessionId(null);
+    setAgentSteps([]);
+    setBiomarkerScores(undefined);
+    setCognitiveReport(undefined);
+    setActivations(CORTEX_REGIONS);
+    setWordTimestamps(undefined);
+    setAudioDuration(undefined);
+  }, [logOut]);
+
   // ── Shared glass style ──────────────────────────────────────────────────────
   const glassStyle: React.CSSProperties = {
     background: "var(--nt-glass)",
@@ -1048,7 +1147,7 @@ export default function DashboardPage() {
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
-      <LaunchSequence />
+      <LaunchSequence readyToFade={backendAwake} onFadeComplete={() => setSplashCompleted(true)} />
 
       {/* Smooth animated background inspired by the original style */}
       <div className="fixed inset-0 z-0 h-screen w-screen">
@@ -1065,7 +1164,10 @@ export default function DashboardPage() {
         }}
       />
       {/* App shell */}
-      <div className="relative z-10 flex h-screen w-full">
+      <div
+        className="relative z-10 flex h-screen w-full transition-opacity duration-300"
+        style={{ opacity: isAuthenticated ? 1 : 0, pointerEvents: isAuthenticated ? "auto" : "none" }}
+      >
         {/* Sidebar — animated width wrapper clips the panel in/out */}
         <div
           className="shrink-0 overflow-hidden"
@@ -1089,6 +1191,8 @@ export default function DashboardPage() {
           >
             <WorkspaceSidebar
               activePage={activePage}
+              userName={profile?.name ?? "Researcher"}
+              userEmail={profile?.email ?? ""}
               onNavItemClick={(item) => setActivePage(item.title.toLowerCase())}
               onNewAnalysis={() => {
                 setActivePage("analysis");
@@ -1112,6 +1216,9 @@ export default function DashboardPage() {
             onToggleSidebar={() => setSidebarOpen((o) => !o)}
             isDark={isDark}
             onToggleTheme={toggleTheme}
+            userName={profile?.name}
+            userEmail={profile?.email}
+            onLogout={handleLogout}
           />
           <div className="relative flex-1 min-h-0 overflow-hidden">
 
@@ -1147,8 +1254,8 @@ export default function DashboardPage() {
               <SessionHistoryPanel
                 entries={historyEntries}
                 onRestore={handleRestore}
-                onRemove={removeEntry}
-                onClearAll={clearAll}
+                onRemove={(id) => { void removeEntry(id); }}
+                onClearAll={() => { void clearAll(); }}
               />
             </div>
 
@@ -1318,6 +1425,32 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {splashCompleted && !isAuthenticated && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center px-4">
+          {!isAuthReady || isBootstrappingAccount ? (
+            <div
+              className="rounded-2xl px-6 py-4"
+              style={{
+                background: "var(--nt-glass)",
+                border: "1px solid var(--nt-glass-border)",
+                color: "var(--nt-text-lo)",
+              }}
+            >
+              Restoring secure session...
+            </div>
+          ) : (
+            <AuthPanel
+              backendAwake={backendAwake}
+              isBusy={isAuthBusy}
+              onSocialSignIn={signInWithSocial}
+              onEmailSignIn={signInWithEmail}
+              onEmailSignUp={signUpWithEmail}
+              onCheckMethods={checkSignInMethods}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

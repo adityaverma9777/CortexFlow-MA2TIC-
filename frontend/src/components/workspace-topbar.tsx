@@ -8,8 +8,26 @@ type WorkspaceTopbarProps = {
   onToggleSidebar?: () => void;
   isDark?: boolean;
   onToggleTheme?: () => void;
+  userName?: string;
+  userEmail?: string;
+  onLogout?: () => void;
 };
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 export function WorkspaceTopbar({
   title = "Cognitive Analysis",
   subtitle,
@@ -17,6 +35,9 @@ export function WorkspaceTopbar({
   onToggleSidebar,
   isDark = false,
   onToggleTheme,
+  userName,
+  userEmail,
+  onLogout,
 }: WorkspaceTopbarProps) {
   return (
     <header
@@ -63,6 +84,29 @@ export function WorkspaceTopbar({
       )}
 
       <div className="flex-1" />
+
+      {userName && (
+        <div className="hidden md:flex flex-col items-end leading-tight mr-2">
+          <span className="text-[11px] font-medium" style={{ color: "var(--nt-text-lo)" }}>
+            Logged in as {userName}
+          </span>
+          {userEmail && (
+            <span className="text-[10px]" style={{ color: "var(--nt-text-ghost)" }}>
+              {userEmail}
+            </span>
+          )}
+        </div>
+      )}
+
+      {onLogout && (
+        <button
+          onClick={onLogout}
+          className="nt-nav-btn flex items-center justify-center px-2.5 h-7 rounded-md shrink-0 text-[11px]"
+          title="Log out"
+        >
+          Logout
+        </button>
+      )}
 
       {/* Theme toggle */}
       {onToggleTheme && (

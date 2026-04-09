@@ -51,7 +51,8 @@ cd backend
 python -m venv .venv
 . .venv/Scripts/Activate.ps1
 pip install -r requirements.txt
-copy .env.example .env
 uvicorn main:app --reload --port 8000
 ```
+
+Create `backend/.env` manually with the required values before starting the backend.
 

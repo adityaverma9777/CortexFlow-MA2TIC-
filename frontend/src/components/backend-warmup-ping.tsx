@@ -13,19 +13,13 @@ export function BackendWarmupPing() {
     }
 
     sentRef.current = true;
-    const timerId = window.setTimeout(() => {
-      void fetch("/api/wake-backend", {
-        method: "POST",
-        cache: "no-store",
-        keepalive: true,
-      }).catch(() => {
-        // Silent failure is intentional for background wakeup.
-      });
-    }, 800);
-
-    return () => {
-      window.clearTimeout(timerId);
-    };
+    void fetch("/api/wake-backend", {
+      method: "POST",
+      cache: "no-store",
+      keepalive: true,
+    }).catch(() => {
+      // Silent failure is intentional for background wakeup.
+    });
   }, []);
 
   return null;
