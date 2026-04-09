@@ -14,15 +14,6 @@ type AuthPanelProps = {
 
 type AuthMode = "signin" | "signup";
 
-const SOCIAL_BUTTONS: Array<{ id: SocialProvider; label: string }> = [
-  { id: "google", label: "Google" },
-  { id: "github", label: "GitHub" },
-  { id: "facebook", label: "Facebook" },
-  { id: "twitter", label: "Twitter/X" },
-  { id: "microsoft", label: "Microsoft" },
-  { id: "apple", label: "Apple" },
-];
-
 function providerLabel(providerId: string) {
   switch (providerId) {
     case "google.com":
@@ -100,9 +91,9 @@ export function AuthPanel({
 
   const canSubmitForm = backendAwake && !isBusy && !socialOnlyProvider;
 
-  const runSocialSignIn = async (provider: SocialProvider) => {
+  const runGoogleSignIn = async () => {
     setMessage(null);
-    const result = await onSocialSignIn(provider);
+    const result = await onSocialSignIn("google");
     if (!result.ok && result.error) {
       setMessage(result.error);
     }
@@ -167,23 +158,20 @@ export function AuthPanel({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {SOCIAL_BUTTONS.map((provider) => (
-              <button
-                key={provider.id}
-                type="button"
-                onClick={() => void runSocialSignIn(provider.id)}
-                disabled={!backendAwake || isBusy}
-                className="rounded-xl px-3 py-2 text-xs font-medium transition-opacity hover:opacity-90 disabled:opacity-45"
-                style={{
-                  border: "1px solid var(--nt-divider)",
-                  color: "var(--nt-text-md)",
-                  background: "var(--nt-hover)",
-                }}
-              >
-                Continue with {provider.label}
-              </button>
-            ))}
+          <div className="grid grid-cols-1 gap-2">
+            <button
+              type="button"
+              onClick={() => void runGoogleSignIn()}
+              disabled={!backendAwake || isBusy}
+              className="rounded-xl px-3 py-2 text-xs font-medium transition-opacity hover:opacity-90 disabled:opacity-45"
+              style={{
+                border: "1px solid var(--nt-divider)",
+                color: "var(--nt-text-md)",
+                background: "var(--nt-hover)",
+              }}
+            >
+              Continue with Google
+            </button>
           </div>
         </div>
 
