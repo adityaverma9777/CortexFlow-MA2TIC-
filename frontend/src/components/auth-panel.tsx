@@ -129,9 +129,9 @@ export function AuthPanel({
   };
 
   return (
-    <div className="w-full max-w-[980px] px-6">
+    <div className="w-full max-w-[980px] px-4 sm:px-6">
       <div
-        className="grid gap-5 rounded-3xl p-6 md:grid-cols-[1.15fr_1fr]"
+        className="grid gap-4 sm:gap-5 rounded-3xl p-4 sm:p-6 md:grid-cols-[1.15fr_1fr]"
         style={{
           background: "var(--nt-glass-hi)",
           border: "1px solid var(--nt-glass-border)",
@@ -148,7 +148,7 @@ export function AuthPanel({
               account access
             </span>
             <h2
-              className="text-3xl leading-tight"
+              className="text-2xl sm:text-3xl leading-tight"
               style={{ color: "var(--nt-text-hi)", fontFamily: "var(--font-syne)", fontWeight: 700 }}
             >
               Sign in to your Cognitive Workspace
@@ -176,7 +176,7 @@ export function AuthPanel({
         </div>
 
         <div
-          className="rounded-2xl p-4"
+          className="rounded-2xl p-3 sm:p-4"
           style={{
             border: "1px solid var(--nt-divider)",
             background: "var(--nt-glass)",

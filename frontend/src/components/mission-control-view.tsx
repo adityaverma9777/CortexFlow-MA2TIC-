@@ -71,7 +71,22 @@ interface CustomTooltipProps {
   payload?: TooltipPayloadItem[];
   label?: string;
 }
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
@@ -206,7 +221,22 @@ function KpiCard({ label, value, sub, accentColor, icon, delay = 0, trend }: Kpi
     </div>
   );
 }
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 function RiskBadge({ level }: { level?: string }) {
   const cfg = RISK_CONFIG[(level as keyof typeof RISK_CONFIG) ?? "unknown"] ?? RISK_CONFIG.unknown;
   return (
@@ -347,10 +377,25 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
       </div>
     );
   }
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
   return (
     <div className="absolute inset-0 overflow-y-auto" style={{ padding: "12px 14px 18px" }}>
-      <div className="flex items-center justify-between mb-4 animate-fade-up" style={{ animationFillMode: "both" }}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 animate-fade-up" style={{ animationFillMode: "both" }}>
         <div>
           <h1
             style={{
@@ -369,7 +414,7 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
         </div>
         <button
           onClick={onStartAnalysis}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all duration-150 active:scale-95"
+          className="w-full sm:w-auto justify-center sm:justify-start flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all duration-150 active:scale-95"
           style={{
             background: "var(--nt-btn-bg)",
             color: "var(--nt-btn-fg)",
@@ -380,7 +425,7 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
           New analysis
         </button>
       </div>
-      <div className="grid grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
         <KpiCard
           label="Total Sessions"
           value={entries.length}
@@ -415,8 +460,23 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
           delay={240}
         />
       </div>
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
-      <div className="grid gap-3 mb-3" style={{ gridTemplateColumns: "1fr 260px" }}>
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
+      <div className="grid gap-3 mb-3 xl:grid-cols-[minmax(0,1fr)_260px]">
 
         <div
           className="animate-fade-up rounded-2xl p-4"
@@ -531,8 +591,23 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
           </div>
         </div>
       </div>
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
-      <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
+      <div className="grid gap-3 lg:grid-cols-2">
 
         <div
           className="animate-fade-up rounded-2xl p-4"
@@ -652,7 +727,22 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
                       {shortDate(entry.timestamp)} · {relativeTime(entry.timestamp)}
                     </div>
                   </div>
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <RiskBadge level={entry.report?.risk_level} />
                     <div className="flex items-center gap-1.5">
@@ -690,7 +780,7 @@ export function MissionControlView({ entries, onStartAnalysis }: MissionControlV
             >
               Risk Distribution
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               {(["low", "moderate", "high"] as const).map((level) => {
                 const cfg = RISK_CONFIG[level];
                 const count = riskCounts[level];

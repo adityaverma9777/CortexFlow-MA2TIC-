@@ -41,7 +41,7 @@ export function WorkspaceTopbar({
 }: WorkspaceTopbarProps) {
   return (
     <header
-      className="flex items-center gap-3 px-4 h-11 shrink-0"
+      className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-11 shrink-0 min-w-0"
       style={{
         background: "var(--nt-hdr)",
         borderBottom: "1px solid var(--nt-hdr-border)",
@@ -70,7 +70,7 @@ export function WorkspaceTopbar({
         <div className="w-1.5 h-1.5 rounded-[1px]" style={{ background: "var(--nt-text-xs)" }} />
       </div>
       <span
-        className="text-[13px] font-medium tracking-tight"
+        className="text-[12px] sm:text-[13px] font-medium tracking-tight truncate max-w-[44vw] sm:max-w-none"
         style={{ color: "var(--nt-text-md)", fontFamily: "var(--font-dm-sans), sans-serif" }}
       >
         {title}

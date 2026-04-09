@@ -1,10 +1,25 @@
 "use client";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Mic, MicOff, Send } from "lucide-react";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 
 export type WordTimestamp = { word: string; start?: number; end?: number };
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 export type AnalysisInput =
   | { type: "text"; content: string }
   | { type: "transcript"; content: string; pauseMap?: number[]; wordTimestamps?: WordTimestamp[]; duration?: number }
@@ -142,7 +157,22 @@ export function InputCommandPanel({
           </div>
         </div>
       )}
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
       {showLive && (
         <div
           className="rounded-xl px-4 py-3 flex flex-col gap-2.5"
@@ -152,7 +182,7 @@ export function InputCommandPanel({
             boxShadow: "0 0 18px rgba(239,159,39,0.08)",
           }}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <span
                 className="w-2 h-2 rounded-full animate-pulse"
@@ -165,7 +195,7 @@ export function InputCommandPanel({
                 Live · {`${Math.floor(recordSeconds / 60).toString().padStart(2, "0")}:${(recordSeconds % 60).toString().padStart(2, "0")}`}
               </span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap sm:justify-end">
               {silenceCountdown !== null && (
                 <span
                   className="text-[10px] tabular-nums font-medium px-2 py-0.5 rounded-full"
@@ -239,7 +269,7 @@ export function InputCommandPanel({
           textarea:read-only { cursor: default; }
         `}</style>
 
-        <div className="flex items-center gap-2 px-3 pb-2.5 pt-1">
+        <div className="flex flex-wrap items-center gap-2 px-3 pb-2.5 pt-1">
           <div className="relative flex items-center justify-center">
             <span
               aria-hidden
@@ -291,7 +321,7 @@ export function InputCommandPanel({
             </button>
           </div>
           <span
-            className="text-[10px] leading-none"
+            className="text-[10px] leading-snug min-w-[180px] flex-1"
             style={{ color: "var(--nt-text-xs)", fontFamily: "var(--font-dm-sans)" }}
           >
             Record your audio: click mic. Auto-submit after ~3s of silence.
@@ -310,13 +340,28 @@ export function InputCommandPanel({
                 : "transcribing…"}
             </span>
           )}
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
-          <div className="flex-1" />
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
+          <div className="hidden sm:block flex-1" />
 
           <button
             onClick={handleSend}
             disabled={!text.trim() || isLoading || isRecording}
-            className="h-7 px-3 rounded-full flex items-center gap-1.5 text-[11px] font-medium transition-colors disabled:opacity-25"
+            className="h-7 px-3 rounded-full flex items-center gap-1.5 text-[11px] font-medium transition-colors disabled:opacity-25 ml-auto sm:ml-0"
             style={{ background: "var(--nt-btn-bg)", color: "var(--nt-btn-fg)" }}
           >
             {isLoading

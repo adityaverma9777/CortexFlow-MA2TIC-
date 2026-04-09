@@ -221,7 +221,7 @@ function BiomarkersPanel() {
       </div>
 
       {}
-      <div className="grid gap-2.5" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="grid gap-2.5 md:grid-cols-2">
         {biomarkers.map((bm) => (
           <div
             key={bm.id}
@@ -463,7 +463,7 @@ function CortexRegionsPanel() {
       {/* 3D brain — same viewer as the analysis page */}
       <div
         className="rounded-xl mb-3 overflow-hidden relative"
-        style={{ ...GLASS, height: 280 }}
+        style={{ ...GLASS, height: "clamp(220px, 44vw, 280px)" }}
       >
         <SignalFieldViewer
           activations={DEFAULT_REGIONS}
@@ -527,7 +527,7 @@ function CortexRegionsPanel() {
             />
 
             {/* Content */}
-            <div className="flex-1 min-w-0 px-4 py-3 grid gap-x-6" style={{ gridTemplateColumns: "1fr 1.4fr" }}>
+            <div className="flex-1 min-w-0 px-4 py-3 grid gap-x-6 gap-y-2 md:grid-cols-[1fr_1.4fr]">
               {/* Left col: identity */}
               <div className="flex flex-col gap-1.5 justify-center">
                 <div className="flex items-center gap-2">
@@ -595,7 +595,10 @@ function CortexRegionsPanel() {
               </div>
 
               {/* Right col: function + signal */}
-              <div className="flex flex-col gap-2 justify-center" style={{ borderLeft: "1px solid var(--nt-divider)", paddingLeft: 16 }}>
+              <div
+                className="flex flex-col gap-2 justify-center border-t pt-3 md:border-t-0 md:border-l md:pt-0 md:pl-4"
+                style={{ borderColor: "var(--nt-divider)" }}
+              >
                 <p style={{ color: "var(--nt-text-lo)", fontSize: 11, fontFamily: "var(--font-dm-sans)", lineHeight: 1.55 }}>
                   {r.function}
                 </p>
@@ -623,8 +626,8 @@ function CortexRegionsPanel() {
       </div>
       {/* Pipeline note */}
       <div
-        className="mt-3 rounded-xl px-4 py-3 grid gap-4"
-        style={{ ...GLASS, gridTemplateColumns: "1fr 1fr" }}
+        className="mt-3 rounded-xl px-4 py-3 grid gap-4 md:grid-cols-2"
+        style={{ ...GLASS }}
       >
         <div>
           <div
@@ -886,7 +889,9 @@ export default function DashboardPage() {
     logOut,
   } = useFirebaseAuth();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
   const isAuthenticated = Boolean(profile);
   const { entries: historyEntries, addEntry, removeEntry, clearAll } = useSessionHistory(idToken, isAuthenticated);
   const [hasStarted, setHasStarted] = useState(false);
@@ -903,6 +908,17 @@ export default function DashboardPage() {
   const [backendAwake, setBackendAwake] = useState(false);
   const [splashCompleted, setSplashCompleted] = useState(false);
   const [isBootstrappingAccount, setIsBootstrappingAccount] = useState(false);
+
+  const sidebarOpen = isMobileLayout ? mobileSidebarOpen : desktopSidebarOpen;
+
+  const toggleSidebar = useCallback(() => {
+    if (isMobileLayout) {
+      setMobileSidebarOpen((open) => !open);
+      return;
+    }
+
+    setDesktopSidebarOpen((open) => !open);
+  }, [isMobileLayout]);
 
   const agentCards = useMemo(() => {
     return activations.map((r) => {
@@ -964,6 +980,52 @@ export default function DashboardPage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 1023px)");
+
+    const syncLayout = (matches: boolean) => {
+      setIsMobileLayout(matches);
+      if (!matches) {
+        setMobileSidebarOpen(false);
+      }
+    };
+
+    syncLayout(mediaQuery.matches);
+
+    const onChange = (event: MediaQueryListEvent) => {
+      syncLayout(event.matches);
+    };
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", onChange);
+      return () => mediaQuery.removeEventListener("change", onChange);
+    }
+
+    mediaQuery.addListener(onChange);
+    return () => mediaQuery.removeListener(onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileLayout || !mobileSidebarOpen) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isMobileLayout, mobileSidebarOpen]);
+
+  useEffect(() => {
+    if (isMobileLayout) {
+      setMobileSidebarOpen(false);
+    }
+  }, [activePage, isMobileLayout]);
 
   useEffect(() => {
     if (!idToken) {
@@ -1145,11 +1207,11 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="relative h-screen w-full overflow-hidden">
+    <div className="relative h-[100dvh] w-full overflow-hidden">
       <LaunchSequence readyToFade={backendAwake} onFadeComplete={() => setSplashCompleted(true)} />
 
       {/* Smooth animated background inspired by the original style */}
-      <div className="fixed inset-0 z-0 h-screen w-screen">
+      <div className="fixed inset-0 z-0 h-[100dvh] w-full">
         <FluidNoiseBg isDark={isDark} />
       </div>
 
@@ -1164,15 +1226,28 @@ export default function DashboardPage() {
       />
       {/* App shell */}
       <div
-        className="relative z-10 flex h-screen w-full transition-opacity duration-300"
+        className="relative z-10 flex h-[100dvh] w-full transition-opacity duration-300"
         style={{ opacity: isAuthenticated ? 1 : 0, pointerEvents: isAuthenticated ? "auto" : "none" }}
       >
+        {isMobileLayout && sidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close sidebar"
+            className="absolute inset-0 z-20 bg-black/30 backdrop-blur-[1px]"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar — animated width wrapper clips the panel in/out */}
         <div
-          className="shrink-0 overflow-hidden"
+          className={isMobileLayout ? "absolute bottom-0 left-0 top-0 z-30 overflow-hidden" : "shrink-0 overflow-hidden"}
           style={{
-            width: sidebarOpen ? 240 : 0,
-            transition: "width 280ms cubic-bezier(0.4, 0, 0.2, 1)",
+            width: isMobileLayout ? 240 : sidebarOpen ? 240 : 0,
+            transform: isMobileLayout ? (sidebarOpen ? "translateX(0)" : "translateX(-105%)") : "translateX(0)",
+            pointerEvents: isMobileLayout ? (sidebarOpen ? "auto" : "none") : "auto",
+            transition: isMobileLayout
+              ? "transform 240ms cubic-bezier(0.4, 0, 0.2, 1)"
+              : "width 280ms cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         >
           <PrismSurface
@@ -1193,7 +1268,12 @@ export default function DashboardPage() {
               userName={profile?.name ?? "Researcher"}
               userEmail={profile?.email ?? ""}
               onLogout={handleLogout}
-              onNavItemClick={(item) => setActivePage(item.title.toLowerCase())}
+              onNavItemClick={(item) => {
+                setActivePage(item.title.toLowerCase());
+                if (isMobileLayout) {
+                  setMobileSidebarOpen(false);
+                }
+              }}
               onNewAnalysis={() => {
                 setActivePage("analysis");
                 setHasStarted(false);
@@ -1203,6 +1283,9 @@ export default function DashboardPage() {
                 setActivations(CORTEX_REGIONS);
                 setWordTimestamps(undefined);
                 setAudioDuration(undefined);
+                if (isMobileLayout) {
+                  setMobileSidebarOpen(false);
+                }
               }}
             />
           </PrismSurface>
@@ -1213,7 +1296,7 @@ export default function DashboardPage() {
           <WorkspaceTopbar
             title="Cognitive Analysis"
             sidebarOpen={sidebarOpen}
-            onToggleSidebar={() => setSidebarOpen((o) => !o)}
+            onToggleSidebar={toggleSidebar}
             isDark={isDark}
             onToggleTheme={toggleTheme}
             userName={profile?.name}
@@ -1286,7 +1369,7 @@ export default function DashboardPage() {
 
             {/* ══════ PHASE 1 — Pre-submission + Processing ══════ */}
             <div
-              className="absolute inset-0 flex flex-col items-center justify-center px-8 transition-all duration-[400ms] ease-out overflow-y-auto"
+              className="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-8 transition-all duration-[400ms] ease-out overflow-y-auto"
               style={{
                 opacity: (hasStarted && !isLoading) || activePage === "history" || activePage === "brain regions" || activePage === "biomarkers" || activePage === "dashboard" ? 0 : 1,
                 transform: hasStarted && !isLoading ? "translateY(-24px)" : "translateY(0)",
@@ -1294,7 +1377,7 @@ export default function DashboardPage() {
               }}
               aria-hidden={(hasStarted && !isLoading) || activePage === "history" || activePage === "brain regions" || activePage === "biomarkers" || activePage === "dashboard"}
             >
-              <div className="w-full max-w-[42rem] flex flex-col items-center gap-5 py-8">
+              <div className="w-full max-w-[42rem] flex flex-col items-center gap-5 py-6 sm:py-8">
 
                 {/* Title */}
                 <div className="flex flex-col items-center gap-2">
@@ -1348,15 +1431,18 @@ export default function DashboardPage() {
                 opacity: hasStarted && !isLoading && activePage !== "history" && activePage !== "brain regions" && activePage !== "biomarkers" && activePage !== "dashboard" ? 1 : 0,
                 transform: hasStarted && !isLoading ? "none" : "translateY(24px)",
                 pointerEvents: hasStarted && !isLoading && activePage !== "history" && activePage !== "brain regions" && activePage !== "biomarkers" && activePage !== "dashboard" ? "auto" : "none",
-                padding: "10px",
+                padding: isMobileLayout ? "8px" : "10px",
               }}
               aria-hidden={!hasStarted || isLoading || activePage === "history" || activePage === "brain regions" || activePage === "biomarkers" || activePage === "dashboard"}
             >
               {/* ── Top row: Brain + Report ── */}
-              <div className="flex gap-2.5 flex-1 min-h-0">
+              <div className="flex flex-col lg:flex-row gap-2.5 flex-1 min-h-0">
 
               {/* ── LEFT: Brain viewer (60%) ── */}
-              <div className="rounded-2xl overflow-hidden relative" style={{ flex: "3 0 0%", ...glassStyle }}>
+              <div
+                className="rounded-2xl overflow-hidden relative min-h-[280px] lg:min-h-0"
+                style={{ flex: isMobileLayout ? "0 0 clamp(260px, 42vh, 360px)" : "3 0 0%", ...glassStyle }}
+              >
                 {/* MNI badge */}
                 <div className="absolute top-3 left-3 z-10 px-2 py-0.5 rounded-md text-[9px] font-semibold tracking-widest uppercase pointer-events-none"
                   style={{ background: "var(--nt-glass)", backdropFilter: "blur(8px)", color: "var(--nt-text-lo)", border: "1px solid var(--nt-glass-border)", fontFamily: "var(--font-jetbrains-mono)" }}>
@@ -1392,7 +1478,10 @@ export default function DashboardPage() {
               </div>
 
               {/* ── RIGHT: Report (40%) — always visible ── */}
-              <div className="rounded-2xl overflow-hidden flex flex-col" style={{ flex: "2 0 0%", ...glassStyle }}>
+              <div
+                className="rounded-2xl overflow-hidden flex flex-col min-h-[220px] lg:min-h-0"
+                style={{ flex: isMobileLayout ? "1 1 auto" : "2 0 0%", ...glassStyle }}
+              >
                 <div className="flex-1 min-h-0 overflow-y-auto">
                   {cognitiveReport ? (
                     <>
@@ -1411,7 +1500,7 @@ export default function DashboardPage() {
 
               {/* ── BOTTOM CENTER: Chat input ── */}
               <div className="shrink-0 flex justify-center">
-                <div style={{ width: "100%", maxWidth: 660 }}>
+                <div style={{ width: "100%", maxWidth: isMobileLayout ? 999 : 660 }}>
                   <InputCommandPanel
                     onSubmit={handleSubmit}
                     isLoading={isLoading}
