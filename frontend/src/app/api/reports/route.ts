@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { AuthRequestError, requireVerifiedUser } from "@/libs/server-auth";
+import { AuthRequestError, requireAuthenticatedUser } from "@/libs/server-auth";
 import { getSupabaseServerClient } from "@/libs/supabase-server";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await requireVerifiedUser(req);
+    const user = await requireAuthenticatedUser(req);
     const supabase = getSupabaseServerClient();
 
     const { data, error } = await supabase
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireVerifiedUser(req);
+    const user = await requireAuthenticatedUser(req);
     const supabase = getSupabaseServerClient();
     const body = await req.json();
 

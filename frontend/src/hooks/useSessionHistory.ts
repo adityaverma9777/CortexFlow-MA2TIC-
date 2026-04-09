@@ -73,12 +73,18 @@ function toHistoryEntry(row: ApiReportRow): HistoryEntry {
   };
 }
 
-export function useSessionHistory(idToken: string | null) {
+function authHeaders(idToken: string | null): HeadersInit {
+  return idToken
+    ? { Authorization: `Bearer ${idToken}` }
+    : {};
+}
+
+export function useSessionHistory(idToken: string | null, isAuthenticated: boolean) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const loadEntries = useCallback(async () => {
-    if (!idToken) {
+    if (!isAuthenticated) {
       setEntries([]);
       return;
     }
@@ -88,9 +94,7 @@ export function useSessionHistory(idToken: string | null) {
       const res = await fetch("/api/reports", {
         method: "GET",
         cache: "no-store",
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
+        headers: authHeaders(idToken),
       });
 
       if (!res.ok) {
@@ -105,21 +109,21 @@ export function useSessionHistory(idToken: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [idToken]);
+  }, [idToken, isAuthenticated]);
 
   useEffect(() => {
     void loadEntries();
   }, [loadEntries]);
 
   const addEntry = useCallback(async (entry: Omit<HistoryEntry, "id" | "timestamp">) => {
-    if (!idToken) return;
+    if (!isAuthenticated) return;
 
     try {
       const res = await fetch("/api/reports", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
+          ...authHeaders(idToken),
         },
         body: JSON.stringify(entry),
       });
@@ -138,10 +142,10 @@ export function useSessionHistory(idToken: string | null) {
     } catch {
       // Ignore transient API failures.
     }
-  }, [idToken]);
+  }, [idToken, isAuthenticated]);
 
   const removeEntry = useCallback(async (id: string) => {
-    if (!idToken) return;
+    if (!isAuthenticated) return;
 
     const previous = entries;
     setEntries((prev) => prev.filter((entry) => entry.id !== id));
@@ -149,9 +153,7 @@ export function useSessionHistory(idToken: string | null) {
     try {
       const res = await fetch(`/api/reports/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
+        headers: authHeaders(idToken),
       });
 
       if (!res.ok) {
@@ -160,7 +162,7 @@ export function useSessionHistory(idToken: string | null) {
     } catch {
       setEntries(previous);
     }
-  }, [entries, idToken]);
+  }, [entries, idToken, isAuthenticated]);
 /*============================================================
   MA2TIC ORG — Proprietary Software
   © 2026 MA2TIC. All Rights Reserved.
@@ -178,7 +180,7 @@ export function useSessionHistory(idToken: string | null) {
   For permissions and licensing inquiries, contact MA2TIC.
   ============================================================*/
   const clearAll = useCallback(async () => {
-    if (!idToken) return;
+    if (!isAuthenticated) return;
 
     const previous = entries;
     setEntries([]);
@@ -186,9 +188,7 @@ export function useSessionHistory(idToken: string | null) {
     try {
       const res = await fetch("/api/reports/clear", {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
+        headers: authHeaders(idToken),
       });
 
       if (!res.ok) {
@@ -197,7 +197,7 @@ export function useSessionHistory(idToken: string | null) {
     } catch {
       setEntries(previous);
     }
-  }, [entries, idToken]);
+  }, [entries, idToken, isAuthenticated]);
 
   return { entries, isLoading, addEntry, removeEntry, clearAll, reload: loadEntries };
 }

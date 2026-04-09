@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { AuthRequestError, requireVerifiedUser } from "@/libs/server-auth";
+import { AuthRequestError, requireAuthenticatedUser } from "@/libs/server-auth";
 import { getSupabaseServerClient } from "@/libs/supabase-server";
 
 export const runtime = "nodejs";
 
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await requireVerifiedUser(req);
+    const user = await requireAuthenticatedUser(req);
     const supabase = getSupabaseServerClient();
 
     const { error } = await supabase.from("reports").delete().eq("user_id", user.uid);

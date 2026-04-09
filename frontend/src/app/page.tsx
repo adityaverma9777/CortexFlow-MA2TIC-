@@ -887,7 +887,8 @@ export default function DashboardPage() {
   } = useFirebaseAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { entries: historyEntries, addEntry, removeEntry, clearAll } = useSessionHistory(idToken);
+  const isAuthenticated = Boolean(profile);
+  const { entries: historyEntries, addEntry, removeEntry, clearAll } = useSessionHistory(idToken, isAuthenticated);
   const [hasStarted, setHasStarted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -902,8 +903,6 @@ export default function DashboardPage() {
   const [backendAwake, setBackendAwake] = useState(false);
   const [splashCompleted, setSplashCompleted] = useState(false);
   const [isBootstrappingAccount, setIsBootstrappingAccount] = useState(false);
-
-  const isAuthenticated = Boolean(profile && idToken);
 
   const agentCards = useMemo(() => {
     return activations.map((r) => {
@@ -1193,6 +1192,7 @@ export default function DashboardPage() {
               activePage={activePage}
               userName={profile?.name ?? "Researcher"}
               userEmail={profile?.email ?? ""}
+              onLogout={handleLogout}
               onNavItemClick={(item) => setActivePage(item.title.toLowerCase())}
               onNewAnalysis={() => {
                 setActivePage("analysis");

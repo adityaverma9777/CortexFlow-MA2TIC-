@@ -3,18 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { User } from "firebase/auth";
 import {
-  FacebookAuthProvider,
-  GithubAuthProvider,
   GoogleAuthProvider,
-  OAuthProvider,
-  TwitterAuthProvider,
-  createUserWithEmailAndPassword,
-  fetchSignInMethodsForEmail,
   onIdTokenChanged,
-  signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
-  updateProfile,
 } from "firebase/auth";
 import {
   ensureFirebaseLocalPersistence,
@@ -22,61 +14,20 @@ import {
   isFirebaseClientConfigured,
 } from "@/libs/firebase-client";
 
-type SocialProvider = "google" | "github" | "facebook" | "twitter" | "microsoft" | "apple";
+type SocialProvider = "google";
+
+type AuthProfile = {
+  uid: string;
+  email: string;
+  name: string;
+  photoUrl: string;
+  providerId: string | null;
+};
 
 type AuthActionResult = {
   ok: boolean;
   error?: string;
 };
-
-function providerName(method: string) {
-  switch (method) {
-    case "google.com":
-      return "Google";
-    case "github.com":
-      return "GitHub";
-    case "facebook.com":
-      return "Facebook";
-    case "twitter.com":
-      return "Twitter";
-    case "microsoft.com":
-      return "Microsoft";
-    case "apple.com":
-      return "Apple";
-    case "password":
-      return "email/password";
-    default:
-      return method;
-  }
-}
-
-function buildProviderConflictMessage(email: string, methods: string[]): string {
-  const nonPassword = methods.filter((method) => method !== "password");
-
-  if (!nonPassword.length) {
-    return "This email is already registered. Please use your password to sign in.";
-  }
-
-  const provider = providerName(nonPassword[0]);
-  return `This email (${email}) is linked to ${provider} sign-in. Please continue with ${provider} instead of email/password.`;
-}
-
-function getProvider(provider: SocialProvider) {
-  switch (provider) {
-    case "google":
-      return new GoogleAuthProvider();
-    case "github":
-      return new GithubAuthProvider();
-    case "facebook":
-      return new FacebookAuthProvider();
-    case "twitter":
-      return new TwitterAuthProvider();
-    case "microsoft":
-      return new OAuthProvider("microsoft.com");
-    case "apple":
-      return new OAuthProvider("apple.com");
-  }
-}
 
 function normalizeAuthError(error: unknown) {
   const code =
@@ -97,23 +48,60 @@ function normalizeAuthError(error: unknown) {
   return { code, rawMessage, email };
 }
 
+function profileFromFirebaseUser(user: User): AuthProfile {
+  return {
+    uid: user.uid,
+    email: user.email ?? "",
+    name: user.displayName ?? user.email?.split("@")[0] ?? "Researcher",
+    photoUrl: user.photoURL ?? "",
+    providerId: user.providerData[0]?.providerId ?? null,
+  };
+}
+
+async function readBackendError(res: Response) {
+  const data = await res.json().catch(() => ({} as { error?: string }));
+  return data.error || "Authentication failed";
+}
+
 export function useFirebaseAuth() {
-  const [isReady, setIsReady] = useState(false);
+  const [firebaseChecked, setFirebaseChecked] = useState(() => !isFirebaseClientConfigured());
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [sessionProfile, setSessionProfile] = useState<AuthProfile | null>(null);
   const [idToken, setIdToken] = useState<string | null>(null);
 
   const missingConfigMessage = "Firebase client env vars are missing. Configure NEXT_PUBLIC_FIREBASE_* in Vercel.";
 
+  const loadSession = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/session", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        setSessionProfile(null);
+        return;
+      }
+
+      const data = await res.json() as { user?: AuthProfile | null };
+      setSessionProfile(data.user ?? null);
+    } catch {
+      setSessionProfile(null);
+    } finally {
+      setSessionChecked(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isFirebaseClientConfigured()) {
-      setIsReady(true);
       return;
     }
 
     const firebaseAuth = getFirebaseAuthInstance();
     if (!firebaseAuth) {
-      setIsReady(true);
+      setFirebaseChecked(true);
       return;
     }
 
@@ -121,35 +109,52 @@ export function useFirebaseAuth() {
 
     void ensureFirebaseLocalPersistence().finally(() => {
       unsubscribe = onIdTokenChanged(firebaseAuth, async (nextUser) => {
-        setUser(nextUser);
+        setFirebaseUser(nextUser);
         if (nextUser) {
           setIdToken(await nextUser.getIdToken());
         } else {
           setIdToken(null);
         }
-        setIsReady(true);
+        setFirebaseChecked(true);
       });
     });
 
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    void loadSession();
+  }, [loadSession]);
+
   const checkSignInMethods = useCallback(async (email: string): Promise<string[]> => {
-    const firebaseAuth = getFirebaseAuthInstance();
     const trimmed = email.trim();
 
-    if (!firebaseAuth || !trimmed) {
+    if (!trimmed) {
       return [];
     }
 
     try {
-      return await fetchSignInMethodsForEmail(firebaseAuth, trimmed);
+      const res = await fetch(`/api/auth/methods?email=${encodeURIComponent(trimmed)}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        return [];
+      }
+
+      const data = await res.json() as { methods?: string[] };
+      return data.methods ?? [];
     } catch {
       return [];
     }
   }, []);
 
   const signInWithSocial = useCallback(async (providerNameValue: SocialProvider): Promise<AuthActionResult> => {
+    if (providerNameValue !== "google") {
+      return { ok: false, error: "Only Google sign-in is currently enabled." };
+    }
+
     const firebaseAuth = getFirebaseAuthInstance();
     if (!firebaseAuth) {
       return { ok: false, error: missingConfigMessage };
@@ -158,113 +163,93 @@ export function useFirebaseAuth() {
     setIsBusy(true);
 
     try {
-      const provider = getProvider(providerNameValue);
-      if (providerNameValue === "google") {
-        provider.setCustomParameters({ prompt: "select_account" });
-      }
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
 
       await signInWithPopup(firebaseAuth, provider);
       return { ok: true };
     } catch (error) {
-      const details = normalizeAuthError(error);
-
-      if (details.code === "auth/account-exists-with-different-credential" && details.email) {
-        const methods = await checkSignInMethods(details.email);
-        return { ok: false, error: buildProviderConflictMessage(details.email, methods) };
-      }
-
-      return { ok: false, error: details.rawMessage };
+      return { ok: false, error: normalizeAuthError(error).rawMessage };
     } finally {
       setIsBusy(false);
     }
-  }, [checkSignInMethods, missingConfigMessage]);
+  }, [missingConfigMessage]);
 
   const signUpWithEmail = useCallback(async (name: string, email: string, password: string): Promise<AuthActionResult> => {
-    const firebaseAuth = getFirebaseAuthInstance();
-    if (!firebaseAuth) {
-      return { ok: false, error: missingConfigMessage };
-    }
-
     setIsBusy(true);
 
     try {
-      const methods = await checkSignInMethods(email);
-      if (methods.includes("google.com") && !methods.includes("password")) {
-        return { ok: false, error: buildProviderConflictMessage(email, methods) };
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      if (!res.ok) {
+        return { ok: false, error: await readBackendError(res) };
       }
 
-      const credential = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
-      if (name.trim()) {
-        await updateProfile(credential.user, { displayName: name.trim() });
-      }
+      await loadSession();
 
       return { ok: true };
-    } catch (error) {
-      const details = normalizeAuthError(error);
-      if (details.code === "auth/email-already-in-use") {
-        const methods = await checkSignInMethods(email);
-        if (methods.length) {
-          return { ok: false, error: buildProviderConflictMessage(email, methods) };
-        }
-      }
-
-      return { ok: false, error: details.rawMessage };
+    } catch {
+      return { ok: false, error: "Signup failed" };
     } finally {
       setIsBusy(false);
     }
-  }, [checkSignInMethods, missingConfigMessage]);
+  }, [loadSession]);
 
   const signInWithEmail = useCallback(async (email: string, password: string): Promise<AuthActionResult> => {
-    const firebaseAuth = getFirebaseAuthInstance();
-    if (!firebaseAuth) {
-      return { ok: false, error: missingConfigMessage };
-    }
-
     setIsBusy(true);
 
     try {
-      const methods = await checkSignInMethods(email);
-      if (methods.includes("google.com") && !methods.includes("password")) {
-        return { ok: false, error: buildProviderConflictMessage(email, methods) };
+      const res = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        return { ok: false, error: await readBackendError(res) };
       }
 
-      await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
+      await loadSession();
+
       return { ok: true };
-    } catch (error) {
-      const details = normalizeAuthError(error);
-      return { ok: false, error: details.rawMessage };
+    } catch {
+      return { ok: false, error: "Sign in failed" };
     } finally {
       setIsBusy(false);
     }
-  }, [checkSignInMethods, missingConfigMessage]);
+  }, [loadSession]);
 
   const logOut = useCallback(async () => {
-    const firebaseAuth = getFirebaseAuthInstance();
-    if (!firebaseAuth) {
-      return;
-    }
+    await fetch("/api/auth/signout", { method: "POST" }).catch(() => {
+      // Ignore transient signout API errors.
+    });
 
-    await signOut(firebaseAuth);
+    setSessionProfile(null);
+
+    const firebaseAuth = getFirebaseAuthInstance();
+    if (firebaseAuth?.currentUser) {
+      await signOut(firebaseAuth);
+    }
   }, []);
 
   const profile = useMemo(() => {
-    if (!user) {
-      return null;
+    if (firebaseUser) {
+      return profileFromFirebaseUser(firebaseUser);
     }
 
-    return {
-      uid: user.uid,
-      email: user.email ?? "",
-      name: user.displayName ?? user.email?.split("@")[0] ?? "Researcher",
-      photoUrl: user.photoURL ?? "",
-      providerId: user.providerData[0]?.providerId ?? null,
-    };
-  }, [user]);
+    return sessionProfile;
+  }, [firebaseUser, sessionProfile]);
+
+  const isReady = firebaseChecked && sessionChecked;
 
   return {
     isReady,
     isBusy,
-    user,
+    user: firebaseUser,
     profile,
     idToken,
     checkSignInMethods,

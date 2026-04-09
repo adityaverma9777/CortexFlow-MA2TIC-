@@ -3,22 +3,56 @@ import * as React from "react";
 import { Activity, Brain, Clock, FileText, HelpCircle, LayoutDashboard, Mic, Plus, Settings } from "lucide-react";
 
 type NavItem = { title: string; icon: React.ComponentType<{ size?: number; className?: string }>; url: string };
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 type WorkspaceSidebarProps = {
   onNewAnalysis?: () => void;
   onNavItemClick?: (item: NavItem) => void;
   activePage?: string;
   userName?: string;
   userEmail?: string;
+  onLogout?: () => void;
 };
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 export function WorkspaceSidebar({
   onNewAnalysis,
   onNavItemClick,
   activePage = "analysis",
   userName = "Researcher",
   userEmail = "",
+  onLogout,
 }: WorkspaceSidebarProps) {
+  const [showAccountActions, setShowAccountActions] = React.useState(false);
+
   const navMain: NavItem[] = [
     { title: "New Analysis", icon: Plus, url: "#" },
     { title: "Dashboard", icon: LayoutDashboard, url: "#" },
@@ -47,7 +81,22 @@ export function WorkspaceSidebar({
           </span>
         </div>
       </div>
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
       {/* New Analysis button */}
       <button
         onClick={() => handleClick(navMain[0])}
@@ -84,7 +133,22 @@ export function WorkspaceSidebar({
           Analysis
         </span>
       </div>
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
       <div className="flex flex-col gap-0.5 px-1">
         {[
           { title: "Brain Regions", icon: Brain, url: "#" },
@@ -105,7 +169,22 @@ export function WorkspaceSidebar({
       </div>
 
       <div className="flex-1" />
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
       {/* Secondary nav */}
       <div className="flex flex-col gap-0.5 px-1 mb-2">
         {navSecondary.map((item) => {
@@ -123,19 +202,43 @@ export function WorkspaceSidebar({
         })}
       </div>
       {/* User */}
-      <div className="nt-nav-btn mx-1 flex items-center gap-2.5 rounded-lg px-3 py-2 cursor-pointer">
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-          style={{ background: "var(--nt-active)", color: "var(--nt-text-lo)" }}
+      <div className="mx-1">
+        <button
+          type="button"
+          onClick={() => {
+            if (!onLogout) return;
+            setShowAccountActions((prev) => !prev);
+          }}
+          className="nt-nav-btn w-full flex items-center gap-2.5 rounded-lg px-3 py-2 cursor-pointer text-left"
         >
-          {userName?.[0]?.toUpperCase() ?? "R"}
-        </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-xs font-medium truncate" style={{ color: "var(--nt-text-md)" }}>{userName}</span>
-          {userEmail && (
-            <span className="text-[10px] truncate" style={{ color: "var(--nt-text-ghost)" }}>{userEmail}</span>
-          )}
-        </div>
+          <div
+            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
+            style={{ background: "var(--nt-active)", color: "var(--nt-text-lo)" }}
+          >
+            {userName?.[0]?.toUpperCase() ?? "R"}
+          </div>
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-xs font-medium truncate" style={{ color: "var(--nt-text-md)" }}>{userName}</span>
+            {userEmail && (
+              <span className="text-[10px] truncate" style={{ color: "var(--nt-text-ghost)" }}>{userEmail}</span>
+            )}
+          </div>
+        </button>
+
+        {showAccountActions && onLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            className="mt-1 ml-8 px-2.5 py-1 rounded-md text-[10px] font-medium"
+            style={{
+              color: "#D85A30",
+              border: "1px solid rgba(216, 90, 48, 0.28)",
+              background: "rgba(216, 90, 48, 0.08)",
+            }}
+          >
+            Logout
+          </button>
+        )}
       </div>
     </aside>
   );

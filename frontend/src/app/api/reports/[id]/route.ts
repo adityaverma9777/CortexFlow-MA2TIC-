@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { AuthRequestError, requireVerifiedUser } from "@/libs/server-auth";
+import { AuthRequestError, requireAuthenticatedUser } from "@/libs/server-auth";
 import { getSupabaseServerClient } from "@/libs/supabase-server";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireVerifiedUser(req);
+    const user = await requireAuthenticatedUser(req);
     const { id } = await context.params;
 
     if (!id) {

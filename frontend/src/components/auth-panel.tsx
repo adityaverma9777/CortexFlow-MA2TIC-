@@ -154,7 +154,7 @@ export function AuthPanel({
               Sign in to your Cognitive Workspace
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: "var(--nt-text-lo)" }}>
-              Your analyses and reports are tied to your account and synced to Supabase, so your history follows you across sessions.
+              Your reports stick to your account like glitter, so every insight is waiting for you when you come back, no memory gymnastics needed.
             </p>
           </div>
 
