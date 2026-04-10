@@ -35,14 +35,14 @@ const TEAM_MEMBERS: TeamMember[] = [
     university: "Eternal University",
     about: "Web Developer | BCA Student | Passionate About User-Friendly Designs",
     linkedin: "https://www.linkedin.com/in/manika-kutiyal/",
-    avatar: "/images/Manna.jfif",
+    avatar: "/images/Manna.png",
   },
   {
     name: "Aditya Verma",
     university: "Lovely Professional University",
     about: "ML Systems | Quantization & Inference | AI Deployment",
     linkedin: "https://www.linkedin.com/in/adityaverma9777/",
-    avatar: "/images/Aditya.jfif",
+    avatar: "/images/Aditya.png",
   },
 ];
 
