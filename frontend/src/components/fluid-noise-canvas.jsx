@@ -349,17 +349,17 @@ function FluidPlane({ isDark, lowPower }) {
 
 
 
-export default function FluidNoiseCanvas({ isDark }) {
+export default function FluidNoiseCanvas({ isDark, lowPower = false }) {
   return (
 
     <Canvas
       className="fluid-noise-bg"
       camera={{ position: [0, 0, 4.5] }}
-      dpr={1}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
+      dpr={lowPower ? 0.8 : 1}
+      gl={{ antialias: !lowPower, powerPreference: lowPower ? "low-power" : "high-performance" }}
     >
 
-      <FluidPlane isDark={isDark} lowPower={false} />
+      <FluidPlane isDark={isDark} lowPower={lowPower} />
 
     </Canvas>
 

@@ -1190,7 +1190,11 @@ export default function DashboardPage() {
 
       {/* Smooth animated background inspired by the original style */}
       <div className="fixed inset-0 z-0 h-[100dvh] w-full">
-        <FluidNoiseBg isDark={isDark} forceLowPower={isLowPowerClient} />
+        <FluidNoiseBg
+          isDark={isDark}
+          forceLowPower={isLowPowerClient && isMobileLayout}
+          keepDesktopTexture
+        />
       </div>
 
       {/* Readability layer over animated background */}

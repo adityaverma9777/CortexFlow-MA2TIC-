@@ -9,14 +9,24 @@ const FluidNoiseCanvas = dynamic(() => import("@/components/fluid-noise-canvas")
   ssr: false,
 });
 
-export default function FluidNoiseBg({ isDark, forceLowPower = false }) {
+export default function FluidNoiseBg({ isDark, forceLowPower = false, keepDesktopTexture = false }) {
   const [lowPower, setLowPower] = useState(true);
+  const [renderCanvas, setRenderCanvas] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(pointer: coarse), (prefers-reduced-motion: reduce), (max-width: 1023px)");
 
     const sync = () => {
-      setLowPower(forceLowPower || isLowPowerDevice());
+      const touchLike = window.matchMedia("(pointer: coarse)").matches;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const desktopLayout = !touchLike && window.innerWidth >= 1024;
+      const lowPowerDetected = forceLowPower || isLowPowerDevice();
+      const shouldRenderCanvas =
+        !lowPowerDetected ||
+        (keepDesktopTexture && desktopLayout && !reducedMotion);
+
+      setLowPower(lowPowerDetected);
+      setRenderCanvas(shouldRenderCanvas);
     };
 
     sync();
@@ -36,9 +46,9 @@ export default function FluidNoiseBg({ isDark, forceLowPower = false }) {
       window.removeEventListener("resize", sync);
       media.removeListener(sync);
     };
-  }, [forceLowPower]);
+  }, [forceLowPower, keepDesktopTexture]);
 
-  if (lowPower) {
+  if (!renderCanvas) {
     return (
       <div
         aria-hidden="true"
@@ -47,5 +57,5 @@ export default function FluidNoiseBg({ isDark, forceLowPower = false }) {
     );
   }
 
-  return <FluidNoiseCanvas isDark={isDark} />;
+  return <FluidNoiseCanvas isDark={isDark} lowPower={lowPower} />;
 }
