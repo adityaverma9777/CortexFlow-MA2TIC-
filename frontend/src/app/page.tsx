@@ -52,6 +52,10 @@ const CognitionReportPanel = dynamic(
   () => import("@/components/cognition-report-panel").then((mod) => mod.CognitionReportPanel),
   { ssr: false }
 );
+const AboutPanel = dynamic(
+  () => import("@/components/about-panel").then((mod) => mod.AboutPanel),
+  { ssr: false }
+);
 const SpeechWavePanel = dynamic(
   () => import("@/components/speech-wave-panel").then((mod) => mod.SpeechWavePanel),
   { ssr: false }
@@ -840,7 +844,9 @@ export default function DashboardPage() {
   const isReportsPage = activePage === "reports";
   const isBrainRegionsPage = activePage === "brain regions";
   const isBiomarkersPage = activePage === "biomarkers";
-  const isLibraryPage = isDashboardPage || isHistoryPage || isReportsPage || isBrainRegionsPage || isBiomarkersPage;
+  const isAboutPage = activePage === "about";
+  const isLibraryPage = isDashboardPage || isHistoryPage || isReportsPage || isBrainRegionsPage || isBiomarkersPage || isAboutPage;
+  const topbarTitle = isAboutPage ? "About MA2TIC" : "Cognitive Analysis";
 
   const showPhase2 = hasStarted && !isLoading && !isLibraryPage;
   const showPhase1 = !showPhase2 && !isLibraryPage;
@@ -1277,7 +1283,7 @@ export default function DashboardPage() {
         {/* Main content — flex-1 fills whatever space the sidebar leaves */}
         <div className="flex flex-col flex-1 min-w-0">
           <WorkspaceTopbar
-            title="Cognitive Analysis"
+            title={topbarTitle}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={toggleSidebar}
             isDark={isDark}
@@ -1335,6 +1341,13 @@ export default function DashboardPage() {
             {isBiomarkersPage && (
               <div className="absolute inset-0 overflow-x-hidden" aria-hidden={!isBiomarkersPage}>
                 <BiomarkersPanel />
+              </div>
+            )}
+
+            {/* ══════ ABOUT VIEW ══════ */}
+            {isAboutPage && (
+              <div className="absolute inset-0 overflow-x-hidden" aria-hidden={!isAboutPage}>
+                <AboutPanel isDark={isDark} />
               </div>
             )}
 

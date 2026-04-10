@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { Activity, Brain, Clock, FileText, HelpCircle, LayoutDashboard, Mic, Plus, Settings } from "lucide-react";
+import { Activity, Brain, Clock, FileText, HelpCircle, LayoutDashboard, Mic, Plus } from "lucide-react";
 
 type NavItem = { title: string; icon: React.ComponentType<{ size?: number; className?: string }>; url: string };
 {/* ============================================================
@@ -61,8 +61,7 @@ export function WorkspaceSidebar({
   ];
 
   const navSecondary: NavItem[] = [
-    { title: "Settings", icon: Settings, url: "#" },
-    { title: "Get Help", icon: HelpCircle, url: "#" },
+    { title: "About", icon: HelpCircle, url: "#" },
   ];
 
   const handleClick = (item: NavItem) => {
