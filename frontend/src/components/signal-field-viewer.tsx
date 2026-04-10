@@ -3,6 +3,7 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
+import { isLowPowerDevice } from "@/libs/device-performance";
 
 {/* ============================================================
     MA2TIC ORG — Proprietary Software
@@ -448,7 +449,7 @@ export default function SignalFieldViewer({
     const container = containerRef.current;
     const touchLike = window.matchMedia("(pointer: coarse)").matches;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const lowPower = touchLike || reducedMotion || window.innerWidth < 1024;
+    const lowPower = isLowPowerDevice() || reducedMotion;
 
     isTouchLikeRef.current = touchLike;
     isLowPowerRef.current = lowPower;
@@ -467,12 +468,12 @@ export default function SignalFieldViewer({
       powerPreference: lowPower ? "low-power" : "high-performance",
     });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1 : 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 0.85 : 1.5));
     renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+    controls.enableDamping = !lowPower;
     controls.dampingFactor = 0.05;
     controls.enablePan = false;
     controls.minDistance = 1.8;
@@ -593,7 +594,11 @@ export default function SignalFieldViewer({
     const animate = (timestamp: number) => {
       frameId = requestAnimationFrame(animate);
 
-      if (isLowPowerRef.current && timestamp - lastRenderTs < 1000 / 30) {
+      if (document.hidden) {
+        return;
+      }
+
+      if (isLowPowerRef.current && timestamp - lastRenderTs < 1000 / 20) {
         return;
       }
 
@@ -622,18 +627,23 @@ export default function SignalFieldViewer({
         if (isHovered) {
           mat.emissiveIntensity = 1.2;
           mat.opacity = Math.min(1, 0.15 + region.activation * 0.65 + 0.35);
+        } else if (isLowPowerRef.current) {
+          mat.emissiveIntensity = 0.3 + region.activation * 0.5;
+          mat.opacity = 0.15 + region.activation * 0.65;
         } else if (region.activation > 0.3) {
           const pulse = Math.sin(elapsed * (1.5 + region.activation * 1.5)) * 0.15 * region.activation;
           mat.emissiveIntensity = 0.3 + region.activation * 0.5 + pulse;
           mat.opacity = 0.15 + region.activation * 0.65 + pulse * 0.3;
         }
       }
-      for (const p of s.connectionParticles) {
-        const t = ((elapsed * p.speed + p.offset) % 1);
-        const pos = p.curve.getPoint(t);
-        p.mesh.position.copy(pos);
-        const alpha = Math.sin(t * Math.PI);
-        (p.mesh.material as THREE.MeshBasicMaterial).opacity = alpha * 0.95;
+      if (!isLowPowerRef.current) {
+        for (const p of s.connectionParticles) {
+          const t = ((elapsed * p.speed + p.offset) % 1);
+          const pos = p.curve.getPoint(t);
+          p.mesh.position.copy(pos);
+          const alpha = Math.sin(t * Math.PI);
+          (p.mesh.material as THREE.MeshBasicMaterial).opacity = alpha * 0.95;
+        }
       }
 
       s.controls.update();
@@ -684,7 +694,7 @@ export default function SignalFieldViewer({
     window.addEventListener("resize", handleResize);
     let hoverUpdateRaf = 0;
     const handlePointerMove = (event: PointerEvent) => {
-      if (isTouchLikeRef.current || clickables.length === 0) {
+      if (isTouchLikeRef.current || isLowPowerRef.current || clickables.length === 0) {
         return;
       }
 
@@ -996,6 +1006,11 @@ export default function SignalFieldViewer({
   }, [clearConnections]);
 
   useEffect(() => {
+    if (isLowPowerRef.current) {
+      clearConnections();
+      return;
+    }
+
     if (hoveredRegion) {
       buildConnections(hoveredRegion);
     } else {

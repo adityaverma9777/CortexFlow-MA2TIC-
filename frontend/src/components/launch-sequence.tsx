@@ -1,18 +1,33 @@
 "use client";
 import { useState, useEffect } from "react";
+import Image, { type StaticImageData } from "next/image";
+import faceIdle from "../../public/images/cf_face_idle.png";
+import faceSleep from "../../public/images/cf_face_sleep.png";
+import faceGlasses from "../../public/images/cf_face_glasses.png";
+import faceConfused from "../../public/images/cf_face_confused.png";
+import faceAlt from "../../public/images/cf_face_alt.png";
 
-const FACES = [
-  "/images/cf_face_idle.png",
-  "/images/cf_face_sleep.png",
-  "/images/cf_face_glasses.png",
-  "/images/cf_face_confused.png",
-  "/images/cf_face_alt.png",
-];
+const FACES: StaticImageData[] = [faceIdle, faceSleep, faceGlasses, faceConfused, faceAlt];
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
 const CYCLE_MS = 600;
 
 export function LaunchSequence({
-  minDisplayMs = 4400,
+  minDisplayMs = 1600,
   readyToFade,
   onFadeComplete,
 }: {
@@ -39,7 +54,10 @@ export function LaunchSequence({
 
   useEffect(() => {
     if (!minTimeReached || fadeStarted) return;
-    if (readyToFade === undefined || readyToFade) setFadeStarted(true);
+    if (readyToFade === undefined || readyToFade) {
+      const rafId = window.requestAnimationFrame(() => setFadeStarted(true));
+      return () => window.cancelAnimationFrame(rafId);
+    }
   }, [minTimeReached, readyToFade, fadeStarted]);
 
   if (splashDone) return null;
@@ -62,9 +80,15 @@ export function LaunchSequence({
               key={faceIndex}
               style={{ animation: "face-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both", width: "100%", height: "100%" }}
             >
-              <img
+              <Image
                 src={FACES[faceIndex]}
                 alt=""
+                width={210}
+                height={210}
+                priority={faceIndex === 0}
+                loading={faceIndex === 0 ? "eager" : "lazy"}
+                sizes="(max-width: 640px) 160px, 210px"
+                quality={68}
                 draggable={false}
                 style={{
                   width: 210,
@@ -97,7 +121,22 @@ export function LaunchSequence({
       </div>
 
       </div>
+{/* ============================================================
+    MA2TIC ORG — Proprietary Software
+    © 2026 MA2TIC. All Rights Reserved.
 
+    Licensed to: MA2TIC Organisation
+    Owners: Archana Thakur | Tanisha Bhardwaj |
+            Manika Kutiyal | Aditya Verma
+
+    NOTICE: This software is proprietary and confidential.
+    Unauthorized copying, fragmentation, redistribution,
+    or publication of this code, in whole or in part,
+    is strictly prohibited without prior written permission
+    from the MA2TIC development team.
+
+    For permissions and licensing inquiries, contact MA2TIC.
+    ============================================================ */}
       <div className="flex items-center gap-1.5">
         {[0, 1, 2].map((i) => (
           <span

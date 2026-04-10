@@ -2,22 +2,23 @@ import type { Metadata } from "next";
 import { Syne, DM_Sans, JetBrains_Mono } from "next/font/google";
 import { BackendWarmupPing } from "@/components/backend-warmup-ping";
 import "./globals.css";
+
 const syne = Syne({
   variable: "--font-syne",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["500", "600", "700"],
 });
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["400", "500", "600"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -36,6 +37,14 @@ export default function RootLayout({
       lang="en"
       className={`${syne.variable} ${dmSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
+      <head>
+        <link
+          rel="preload"
+          as="image"
+          href="/images/cf_face_idle.png"
+          fetchPriority="high"
+        />
+      </head>
       <body className="h-full">
         <BackendWarmupPing />
         {children}

@@ -2,30 +2,21 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { isLowPowerDevice } from "@/libs/device-performance";
 import "./fluid-noise-bg.css";
 
 const FluidNoiseCanvas = dynamic(() => import("@/components/fluid-noise-canvas"), {
   ssr: false,
 });
 
-function isLowPowerDevice() {
-  if (typeof window === "undefined") {
-    return true;
-  }
-
-  const touchLike = window.matchMedia("(pointer: coarse)").matches;
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  return touchLike || reducedMotion || window.innerWidth < 1024;
-}
-
-export default function FluidNoiseBg({ isDark }) {
+export default function FluidNoiseBg({ isDark, forceLowPower = false }) {
   const [lowPower, setLowPower] = useState(true);
 
   useEffect(() => {
-    const media = window.matchMedia("(pointer: coarse), (prefers-reduced-motion: reduce)");
+    const media = window.matchMedia("(pointer: coarse), (prefers-reduced-motion: reduce), (max-width: 1023px)");
 
     const sync = () => {
-      setLowPower(isLowPowerDevice());
+      setLowPower(forceLowPower || isLowPowerDevice());
     };
 
     sync();
@@ -45,7 +36,7 @@ export default function FluidNoiseBg({ isDark }) {
       window.removeEventListener("resize", sync);
       media.removeListener(sync);
     };
-  }, []);
+  }, [forceLowPower]);
 
   if (lowPower) {
     return (

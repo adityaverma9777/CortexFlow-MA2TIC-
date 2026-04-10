@@ -5,17 +5,14 @@ import { LaunchSequence } from "@/components/launch-sequence";
 import { AuthPanel } from "@/components/auth-panel";
 import { WorkspaceSidebar } from "@/components/workspace-sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
-import { type SignalAgentCardProps } from "@/components/signal-agent-card";
 import { InputCommandPanel, type AnalysisInput, type WordTimestamp } from "@/components/input-command-panel";
-import { SpeechWavePanel } from "@/components/speech-wave-panel";
-import { CognitionReportPanel, type CognitiveReport } from "@/components/cognition-report-panel";
-import { SessionHistoryPanel } from "@/components/session-history-panel";
-import { MissionControlView } from "@/components/mission-control-view";
+import type { CognitiveReport } from "@/components/cognition-report-panel";
 import PrismSurface from "@/components/prism-surface";
 import type { SignalRegionActivation } from "@/components/signal-field-viewer";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useColorMode } from "@/hooks/useColorMode";
+import { isLowPowerDevice } from "@/libs/device-performance";
 
 
 
@@ -32,48 +29,6 @@ const AGENT_KEY: Record<string, string> = {
   Prosody: "prosody", Syntax: "syntax", Affective: "affective",
 };
 
-const AGENT_DETAILS: Record<string, { primerSet: string; markers: { name: string; value: number; unit?: string }[] }> = {
-  Lexical: {
-    primerSet: "TTR · Density · Filler",
-    markers: [
-      { name: "TTR", value: 68 },
-      { name: "Lexical density", value: 74 },
-      { name: "Filler rate", value: 42 },
-    ],
-  },
-  Semantic: {
-    primerSet: "Coherence · Density · Tang",
-    markers: [
-      { name: "Coherence", value: 58 },
-      { name: "Idea density", value: 61 },
-      { name: "Tangentiality", value: 33 },
-    ],
-  },
-  Prosody: {
-    primerSet: "Rate · Pause · Hesitation",
-    markers: [
-      { name: "Speech rate", value: 44, unit: "wpm" },
-      { name: "Pause freq", value: 51, unit: "/min" },
-      { name: "Hesitation", value: 38 },
-    ],
-  },
-  Syntax: {
-    primerSet: "MLU · Depth · Passive",
-    markers: [
-      { name: "MLU", value: 83 },
-      { name: "Clause depth", value: 79 },
-      { name: "Passive voice", value: 22 },
-    ],
-  },
-  Affective: {
-    primerSet: "Valence · Arousal · Intensity",
-    markers: [
-      { name: "Valence", value: 55 },
-      { name: "Arousal", value: 62 },
-      { name: "Intensity", value: 48 },
-    ],
-  },
-};
 function scoreColor(v: number) {
   if (v > 75) return "#D85A30";
   if (v > 50) return "#BA7517";
@@ -85,6 +40,22 @@ function scoreColor(v: number) {
 
 const SignalFieldViewer = dynamic(() => import("@/components/signal-field-viewer"), { ssr: false });
 const FluidNoiseBg = dynamic(() => import("@/components/fluid-noise-bg"), { ssr: false });
+const MissionControlView = dynamic(
+  () => import("@/components/mission-control-view").then((mod) => mod.MissionControlView),
+  { ssr: false }
+);
+const SessionHistoryPanel = dynamic(
+  () => import("@/components/session-history-panel").then((mod) => mod.SessionHistoryPanel),
+  { ssr: false }
+);
+const CognitionReportPanel = dynamic(
+  () => import("@/components/cognition-report-panel").then((mod) => mod.CognitionReportPanel),
+  { ssr: false }
+);
+const SpeechWavePanel = dynamic(
+  () => import("@/components/speech-wave-panel").then((mod) => mod.SpeechWavePanel),
+  { ssr: false }
+);
 
 
 
@@ -683,74 +654,6 @@ function CortexRegionsPanel() {
     </div>
   );
 }
-function MiniAgentCard({ agent, isActive }: { agent: SignalAgentCardProps; isActive: boolean }) {
-  const score = agent.topScore ?? 0;
-  const color = scoreColor(score);
-
-  return (
-    <div
-      className="rounded-xl p-3 h-full flex flex-col"
-      style={{
-        background: "var(--nt-glass)",
-        backdropFilter: "blur(16px)",
-        border: isActive ? `1px solid rgba(216,90,48,0.35)` : "1px solid var(--nt-glass-border)",
-        boxShadow: isActive
-          ? "0 0 0 2px rgba(216,90,48,0.08), var(--nt-glass-shadow)"
-          : "var(--nt-glass-shadow)",
-        transition: "border-color 0.3s, box-shadow 0.3s",
-      }}
-    >
-      {/* Name + score */}
-      <div className="flex items-start justify-between gap-1 mb-1.5">
-        <div>
-          <p className="text-[11px] font-semibold leading-tight" style={{ color: "var(--nt-text-hi)" }}>{agent.agentName}</p>
-          <p className="text-[9px] mt-0.5" style={{ color: "var(--nt-text-xs)", fontFamily: "var(--font-jetbrains-mono)" }}>
-            {agent.brainRegion}
-          </p>
-        </div>
-        <span className="text-sm font-bold tabular-nums leading-none pt-0.5" style={{ color }}>
-          {score}
-        </span>
-      </div>
-
-      {/* Overall score bar */}
-      <div className="h-1 rounded-full overflow-hidden mb-2" style={{ background: "var(--nt-track)" }}>
-        <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${score}%`, background: color }}
-        />
-      </div>
-
-      {/* Compact metrics */}
-      <div className="flex flex-col gap-1 flex-1">
-        {agent.markers.slice(0, 2).map((m) => (
-          <div key={m.name} className="flex items-center justify-between gap-1">
-            <span className="text-[10px] truncate" style={{ color: "var(--nt-text-lo)" }}>{m.name}</span>
-            <span
-              className="text-[10px] tabular-nums shrink-0"
-              style={{ color: scoreColor(m.value), fontFamily: "var(--font-jetbrains-mono)" }}
-            >
-              {m.value}{m.unit ? ` ${m.unit}` : ""}
-            </span>
-          </div>
-        ))}
-      </div>
-      {/* Active indicator */}
-      <div className="flex items-center gap-1.5 pt-2 mt-auto" style={{ borderTop: "1px solid var(--nt-divider)" }}>
-        <div
-          className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-amber-400 animate-pulse" : ""}`}
-          style={!isActive ? { background: "var(--nt-track)" } : {}}
-        />
-        <span
-          className="text-[9px] uppercase tracking-widest"
-          style={{ color: "var(--nt-text-ghost)", fontFamily: "var(--font-jetbrains-mono)" }}
-        >
-          {isActive ? "Processing" : "Standby"}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 // ─── Processing steps overlay ────────────────────────────────────────────────
 
@@ -892,6 +795,7 @@ export default function DashboardPage() {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [isLowPowerClient, setIsLowPowerClient] = useState(true);
   const isAuthenticated = Boolean(profile);
   const {
     entries: historyEntries,
@@ -910,7 +814,6 @@ export default function DashboardPage() {
   const [audioDuration, setAudioDuration] = useState<number | undefined>();
   const [activePage, setActivePage] = useState("analysis");
   const [cognitiveReport, setCognitiveReport] = useState<CognitiveReport | undefined>();
-  const [currentAgentIndex, setCurrentAgentIndex] = useState(0);
   const [backendAwake, setBackendAwake] = useState(false);
   const [splashCompleted, setSplashCompleted] = useState(false);
   const [isBootstrappingAccount, setIsBootstrappingAccount] = useState(false);
@@ -925,27 +828,6 @@ export default function DashboardPage() {
 
     setDesktopSidebarOpen((open) => !open);
   }, [isMobileLayout]);
-
-  const agentCards = useMemo(() => {
-    return activations.map((r) => {
-      const details = AGENT_DETAILS[r.agent] ?? AGENT_DETAILS.Lexical;
-      const topScore = Math.round((r.activation || 0) * 100);
-      return {
-        agentName: `${r.agent} Agent`,
-        primerSet: details.primerSet,
-        brainRegion: r.region,
-        markers: details.markers,
-        topScore,
-      };
-    });
-  }, [activations]);
-  const nextAgent = useCallback(() => {
-    setCurrentAgentIndex((prev) => (prev + 1) % agentCards.length);
-  }, [agentCards.length]);
-
-  const prevAgent = useCallback(() => {
-    setCurrentAgentIndex((prev) => (prev - 1 + agentCards.length) % agentCards.length);
-  }, [agentCards.length]);
 
   const activeAgentName = useMemo(() => {
     const running = agentSteps.find((s) => s.status === "running");
@@ -1031,6 +913,38 @@ export default function DashboardPage() {
     mediaQuery.addListener(onChange);
     return () => mediaQuery.removeListener(onChange);
   }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(pointer: coarse), (prefers-reduced-motion: reduce)");
+
+    const sync = () => {
+      setIsLowPowerClient(isLowPowerDevice());
+    };
+
+    sync();
+    window.addEventListener("resize", sync);
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", sync);
+      return () => {
+        window.removeEventListener("resize", sync);
+        media.removeEventListener("change", sync);
+      };
+    }
+
+    media.addListener(sync);
+    return () => {
+      window.removeEventListener("resize", sync);
+      media.removeListener(sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("perf-lite", isLowPowerClient);
+    return () => {
+      document.documentElement.classList.remove("perf-lite");
+    };
+  }, [isLowPowerClient]);
 
   useEffect(() => {
     if (!isMobileLayout || !mobileSidebarOpen) {
@@ -1276,7 +1190,7 @@ export default function DashboardPage() {
 
       {/* Smooth animated background inspired by the original style */}
       <div className="fixed inset-0 z-0 h-[100dvh] w-full">
-        <FluidNoiseBg isDark={isDark} />
+        <FluidNoiseBg isDark={isDark} forceLowPower={isLowPowerClient} />
       </div>
 
       {/* Readability layer over animated background */}
@@ -1297,7 +1211,7 @@ export default function DashboardPage() {
           <button
             type="button"
             aria-label="Close sidebar"
-            className="absolute inset-0 z-20 bg-black/30 backdrop-blur-[1px]"
+            className={`absolute inset-0 z-20 ${isLowPowerClient ? "bg-black/30" : "bg-black/30 backdrop-blur-[1px]"}`}
             onClick={() => setMobileSidebarOpen(false)}
           />
         )}
@@ -1323,6 +1237,7 @@ export default function DashboardPage() {
             blur={18}
             backgroundOpacity={isDark ? 0.22 : 0.18}
             saturation={1.12}
+            performanceMode={isLowPowerClient || isMobileLayout}
             className="border-r sidebar-dock"
             style={{ borderRight: "1px solid var(--nt-divider)" } as React.CSSProperties}
             contentClassName="!p-0 !items-start !justify-start"
