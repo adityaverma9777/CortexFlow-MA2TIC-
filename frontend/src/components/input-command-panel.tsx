@@ -91,7 +91,7 @@ export function InputCommandPanel({
 
   const {
     isRecording, isTranscribing, recordSeconds, audioLevel,
-    liveTranscript, silenceCountdown,
+    liveTranscript, silenceCountdown, errorMessage,
     toggle,
   } = useVoiceRecorder(handleTranscriptReady);
 
@@ -248,6 +248,20 @@ export function InputCommandPanel({
           </span>
         </div>
       )}
+
+      {errorMessage && !showLive && !showTranscribing && (
+        <div
+          className="rounded-xl px-4 py-2.5 text-[12px]"
+          style={{
+            ...GLASS,
+            border: "1px solid rgba(248,113,113,0.35)",
+            color: "rgba(254,202,202,0.95)",
+          }}
+        >
+          {errorMessage}
+        </div>
+      )}
+
       <div className="rounded-xl overflow-hidden" style={GLASS}>
         <textarea
           value={isRecording ? liveTranscript : text}

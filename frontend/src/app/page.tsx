@@ -1057,7 +1057,36 @@ export default function DashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.body) { setIsLoading(false); return; }
+
+      if (!res.ok) {
+        let detail = `Analysis request failed (${res.status}).`;
+        try {
+          const payload = await res.json();
+          const raw = payload?.error ?? payload?.detail;
+          if (typeof raw === "string" && raw.trim()) {
+            detail = raw.trim();
+          }
+        } catch {
+          const text = await res.text();
+          if (text.trim()) detail = text.trim();
+        }
+
+        setAgentSteps((prev) => prev.map((s) => ({
+          ...s,
+          status: s.status === "done" ? s.status : "error",
+          detail: s.name === "STT preprocessor" ? detail : s.detail,
+        })));
+        return;
+      }
+
+      if (!res.body) {
+        setAgentSteps((prev) => prev.map((s) => ({
+          ...s,
+          status: s.status === "done" ? s.status : "error",
+          detail: s.name === "STT preprocessor" ? "Empty analysis stream from server." : s.detail,
+        })));
+        return;
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -1136,7 +1165,10 @@ export default function DashboardPage() {
             setActivations(CORTEX_REGIONS.map((r) => ({ ...r, activation: scores[AGENT_KEY[r.agent]] ?? r.activation })));
             persistHistory();
           } else if (ev.type === "error") {
-            setAgentSteps((prev) => prev.map((s) => s.status === "running" ? { ...s, status: "error" as const } : s));
+            const detail = typeof ev.message === "string" && ev.message.trim() ? ev.message.trim() : undefined;
+            setAgentSteps((prev) => prev.map((s) => s.status === "running"
+              ? { ...s, status: "error" as const, ...(detail ? { detail } : {}) }
+              : s));
           }
         } catch { /* skip */ }
       };
