@@ -24,7 +24,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "CortexFlow",
   description:
-    "Groq-powered cognitive analysis workspace with a premium neuroscience-inspired UI and live biomarker insights.",
+    "AI-powered cognitive analysis workspace with live biomarker insights.",
 };
 
 export default function RootLayout({
