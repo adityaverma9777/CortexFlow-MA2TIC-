@@ -16,7 +16,20 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const text = await res.text();
-      return NextResponse.json({ error: text }, { status: res.status });
+      let detail = text;
+
+      try {
+        const parsed = JSON.parse(text) as { detail?: unknown; error?: unknown };
+        if (typeof parsed.detail === "string" && parsed.detail.trim()) {
+          detail = parsed.detail.trim();
+        } else if (typeof parsed.error === "string" && parsed.error.trim()) {
+          detail = parsed.error.trim();
+        }
+      } catch {
+        // Keep raw response text when backend does not return JSON.
+      }
+
+      return NextResponse.json({ error: detail }, { status: res.status });
     }
 
     // Pipe the streaming NDJSON response through unchanged
