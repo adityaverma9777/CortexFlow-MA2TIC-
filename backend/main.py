@@ -50,7 +50,7 @@ PREFERRED_SAFETY_MODELS = [
 OVERRIDE_REASONING_MODEL = os.getenv("GROQ_REASONING_MODEL", "").strip()
 OVERRIDE_SAFETY_MODEL = os.getenv("GROQ_SAFETY_MODEL", "").strip()
 
-MIN_WORDS_REQUIRED = int(os.getenv("MIN_WORDS_REQUIRED", "25"))
+MIN_WORDS_REQUIRED = int(os.getenv("MIN_WORDS_REQUIRED", "3"))
 
 STEP_NAMES = [
     "STT preprocessor",
