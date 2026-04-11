@@ -5,6 +5,15 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 export type ReportHighlight  = { region: string; activation: number; finding: string; clinical_context: string };
 export type RiskIndicator    = { indicator: string; severity: "low" | "moderate" | "high"; explanation: string; citation?: string };
 export type CognitiveCitation= { apa: string; pmid?: string; relevance?: string };
+export type LanguageProfile = {
+  label?: string;
+  english_ratio?: number;
+  hindi_ratio?: number;
+  devanagari_ratio?: number;
+  englishRatio?: number;
+  hindiRatio?: number;
+  devanagariRatio?: number;
+};
 
 export type CognitiveReport = {
   summary: string;
@@ -15,6 +24,11 @@ export type CognitiveReport = {
   recommendation?: string;
   citations?: CognitiveCitation[];
   disclaimer?: string;
+  language_profile?: LanguageProfile;
+  quality?: {
+    confidence?: number;
+    notes?: string[];
+  };
 };
 
 const RISK_CONFIG = {
@@ -37,6 +51,14 @@ export function CognitionReportPanel({ report }: { report: CognitiveReport }) {
   const [showCitations, setShowCitations] = useState(false);
   const risk    = RISK_CONFIG[report.risk_level] ?? RISK_CONFIG.moderate;
   const loadPct = Math.round((report.overall_cognitive_load ?? 0) * 100);
+  const languageProfile = report.language_profile;
+  const englishPct = languageProfile
+    ? Math.round(((languageProfile.english_ratio ?? languageProfile.englishRatio ?? 0) as number) * 100)
+    : 0;
+  const hindiPct = languageProfile
+    ? Math.round(((languageProfile.hindi_ratio ?? languageProfile.hindiRatio ?? 0) as number) * 100)
+    : 0;
+  const languageLabel = languageProfile?.label?.toUpperCase();
 
   return (
     <div className="rounded-xl overflow-hidden flex flex-col gap-0" style={GLASS}>
@@ -59,6 +81,12 @@ export function CognitionReportPanel({ report }: { report: CognitiveReport }) {
             {loadPct}% load
           </span>
         </div>
+        {languageProfile && (
+          <div className="mt-2 flex items-center justify-between gap-2 text-[9px]" style={{ color: "var(--nt-text-ghost)", fontFamily: "var(--font-jetbrains-mono)" }}>
+            <span>Language: {languageLabel ?? "MULTILINGUAL"}</span>
+            <span>HI {hindiPct}% · EN {englishPct}%</span>
+          </div>
+        )}
       </div>
       {/* Summary */}
       <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--nt-divider)" }}>

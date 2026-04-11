@@ -8,6 +8,13 @@ export type TranscriptResult = {
   pauseMap?: number[];
   wordTimestamps?: WordTimestamp[];
   duration?: number;
+  detectedLanguage?: string;
+  languageProfile?: {
+    label: "hinglish" | "hindi" | "english" | "multilingual";
+    englishRatio: number;
+    hindiRatio: number;
+    devanagariRatio: number;
+  };
 };
 
 type RecorderFormat = { mimeType: string; extension: string };

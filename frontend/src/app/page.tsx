@@ -1047,6 +1047,17 @@ export default function DashboardPage() {
                 transcript: input.content,
                 pause_map: input.pauseMap,
                 audio_duration: input.duration,
+                ...(input.detectedLanguage ? { detected_language: input.detectedLanguage } : {}),
+                ...(input.languageProfile
+                  ? {
+                      language_profile: {
+                        label: input.languageProfile.label,
+                        english_ratio: input.languageProfile.englishRatio,
+                        hindi_ratio: input.languageProfile.hindiRatio,
+                        devanagari_ratio: input.languageProfile.devanagariRatio,
+                      },
+                    }
+                  : {}),
                 ...(sessionId ? { session_id: sessionId } : {}),
               }
             : null;
@@ -1426,7 +1437,7 @@ export default function DashboardPage() {
                       onSubmit={handleSubmit}
                       isLoading={isLoading}
                       agentSteps={[]}
-                      placeholder="Paste text or record speech to begin analysis…"
+                      placeholder="Paste text or record Hindi-English speech to begin analysis…"
                     />
                   </div>
 

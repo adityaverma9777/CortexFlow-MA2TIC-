@@ -22,7 +22,20 @@ export type WordTimestamp = { word: string; start?: number; end?: number };
     ============================================================ */}
 export type AnalysisInput =
   | { type: "text"; content: string }
-  | { type: "transcript"; content: string; pauseMap?: number[]; wordTimestamps?: WordTimestamp[]; duration?: number }
+  | {
+      type: "transcript";
+      content: string;
+      pauseMap?: number[];
+      wordTimestamps?: WordTimestamp[];
+      duration?: number;
+      detectedLanguage?: string;
+      languageProfile?: {
+        label: "hinglish" | "hindi" | "english" | "multilingual";
+        englishRatio: number;
+        hindiRatio: number;
+        devanagariRatio: number;
+      };
+    }
   | { type: "file"; file: File };
 
 type AgentStep = {
@@ -80,11 +93,21 @@ export function InputCommandPanel({
   const [text, setText] = useState("");
 
   const handleTranscriptReady = useCallback(
-    ({ transcript, pauseMap, wordTimestamps, duration }: {
-      transcript: string; pauseMap?: number[]; wordTimestamps?: WordTimestamp[]; duration?: number;
+    ({ transcript, pauseMap, wordTimestamps, duration, detectedLanguage, languageProfile }: {
+      transcript: string;
+      pauseMap?: number[];
+      wordTimestamps?: WordTimestamp[];
+      duration?: number;
+      detectedLanguage?: string;
+      languageProfile?: {
+        label: "hinglish" | "hindi" | "english" | "multilingual";
+        englishRatio: number;
+        hindiRatio: number;
+        devanagariRatio: number;
+      };
     }) => {
       setText("");
-      onSubmit?.({ type: "transcript", content: transcript, pauseMap, wordTimestamps, duration });
+      onSubmit?.({ type: "transcript", content: transcript, pauseMap, wordTimestamps, duration, detectedLanguage, languageProfile });
     },
     [onSubmit],
   );
@@ -244,7 +267,7 @@ export function InputCommandPanel({
             className="text-[12px] font-medium"
             style={{ color: "rgba(99,179,237,0.85)", fontFamily: "var(--font-dm-sans)" }}
           >
-            Transcribing with Whisper — analysing shortly…
+            Auto-detecting Hindi-English speech — analysing shortly…
           </span>
         </div>
       )}
@@ -338,7 +361,7 @@ export function InputCommandPanel({
             className="text-[10px] leading-snug min-w-[180px] flex-1"
             style={{ color: "var(--nt-text-xs)", fontFamily: "var(--font-dm-sans)" }}
           >
-            Record your audio: click mic. Auto-submit after ~3s of silence.
+            Record your audio in Hindi, English, or Hinglish. Auto-submit after ~3s of silence.
           </span>
 
           {(isRecording || isTranscribing) && (
