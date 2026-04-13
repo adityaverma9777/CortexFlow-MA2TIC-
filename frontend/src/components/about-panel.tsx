@@ -19,16 +19,16 @@ const TEAM_MEMBERS: TeamMember[] = [
   {
     name: "Archana Thakur",
     university: "Eternal University",
-    about: "BCA student focused on building practical digital experiences.",
-    linkedin: "https://www.linkedin.com/",
-    avatar: "/images/cf_face_alt.png",
+    about: "Full Stack Developer | Scalable Web Applications | Algorithmic Problem Solver",
+    linkedin: "https://www.linkedin.com/in/archana-thakur-9b66a4338/",
+    avatar: "/images/Archana.jpeg",
   },
   {
     name: "Tanisha Bhardwaj",
     university: "Eternal University",
-    about: "BCA student interested in modern product development workflows.",
-    linkedin: "https://www.linkedin.com/",
-    avatar: "/images/cf_face_alt.png",
+    about: "Full Stack Developer | UI-Driven Development | Passionate About Scalable Solutions",
+    linkedin: "https://www.linkedin.com/in/tanisha-bhardwaj-69350635a/",
+    avatar: "/images/Tanisha.jpeg",
   },
   {
     name: "Manika Kutiyal",
